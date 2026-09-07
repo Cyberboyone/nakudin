@@ -163,7 +163,7 @@ export async function searchPublishedProjects(query: string) {
   if (!query.trim()) return [];
   const pattern = `%${query.trim()}%`;
   return db
-    .select({
+    .selectDistinct({
       id: projects.id,
       title: projects.title,
       slug: projects.slug,
@@ -172,17 +172,46 @@ export async function searchPublishedProjects(query: string) {
       level: projects.level,
       isSoftware: projects.isSoftware,
       departmentName: departments.name,
+      createdAt: projects.createdAt,
     })
     .from(projects)
     .innerJoin(departments, eq(projects.departmentId, departments.id))
+    .leftJoin(projectTags, eq(projectTags.projectId, projects.id))
+    .leftJoin(tags, eq(projectTags.tagId, tags.id))
     .where(
       and(
         eq(projects.status, "PUBLISHED"),
-        or(ilike(projects.title, pattern), ilike(projects.abstract, pattern))
+        or(
+          ilike(projects.title, pattern),
+          ilike(projects.abstract, pattern),
+          ilike(departments.name, pattern),
+          ilike(tags.name, pattern)
+        )
       )
     )
     .orderBy(desc(projects.createdAt))
     .limit(30);
+}
+
+export async function searchDepartments(query: string) {
+  if (!query.trim()) return [];
+  const pattern = `%${query.trim()}%`;
+  return db
+    .select({
+      id: departments.id,
+      name: departments.name,
+      slug: departments.slug,
+      projectCount: sql<number>`count(${projects.id})`.mapWith(Number),
+    })
+    .from(departments)
+    .leftJoin(
+      projects,
+      and(eq(projects.departmentId, departments.id), eq(projects.status, "PUBLISHED"))
+    )
+    .where(ilike(departments.name, pattern))
+    .groupBy(departments.id)
+    .orderBy(departments.name)
+    .limit(5);
 }
 
 // --- Admin: full project CRUD ---
