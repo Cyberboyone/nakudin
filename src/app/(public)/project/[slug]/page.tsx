@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectBySlug, getRelatedProjects, incrementViewCount } from "@/lib/queries";
@@ -6,7 +7,44 @@ import DownloadButton from "@/components/DownloadButton";
 
 export const dynamic = "force-dynamic";
 
+const BASE_URL = "https://nakudin.com";
+
 type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await getProjectBySlug(slug);
+  if (!project) return {};
+
+  const description = project.abstract.slice(0, 160);
+  const url = `${BASE_URL}/project/${project.slug}`;
+  const ogImage = project.screenshotFileKey
+    ? safePublicUrl(project.screenshotFileKey)
+    : project.previewFileKey
+      ? safePublicUrl(project.previewFileKey)
+      : undefined;
+
+  return {
+    title: `${project.title} | Nakudin`,
+    description,
+    openGraph: {
+      title: `${project.title} | Nakudin`,
+      description,
+      url,
+      type: "article",
+      publishedTime: project.createdAt?.toISOString(),
+      modifiedTime: project.updatedAt?.toISOString(),
+      ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630 }] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${project.title} | Nakudin`,
+      description,
+      ...(ogImage && { images: [ogImage] }),
+    },
+    alternates: { canonical: url },
+  };
+}
 
 export default async function ProjectPage({ params }: Props) {
   const { slug } = await params;

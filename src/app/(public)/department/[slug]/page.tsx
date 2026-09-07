@@ -1,13 +1,42 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDepartmentBySlug, getPublishedProjectsByDepartment } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
+const BASE_URL = "https://nakudin.com";
+
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ level?: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const department = await getDepartmentBySlug(slug);
+  if (!department) return {};
+
+  const description = `Browse final year project materials and source code from the ${department.name} department at Nakudin. Free for students.`;
+  const url = `${BASE_URL}/department/${department.slug}`;
+
+  return {
+    title: `${department.name} Final Year Projects | Nakudin`,
+    description,
+    openGraph: {
+      title: `${department.name} Final Year Projects | Nakudin`,
+      description,
+      url,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: `${department.name} Final Year Projects | Nakudin`,
+      description,
+    },
+    alternates: { canonical: url },
+  };
+}
 
 export default async function DepartmentPage({ params, searchParams }: Props) {
   const { slug } = await params;
