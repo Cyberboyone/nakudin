@@ -87,13 +87,21 @@ export async function POST(req: NextRequest) {
     const contentType =
       typeof f.contentType === "string" && f.contentType ? f.contentType : defaults.contentType;
 
-    if (kind === "materials" && contentType !== "application/pdf") {
+    const PDF_TYPES = ["application/pdf"];
+    const ZIP_TYPES = [
+      "application/zip",
+      "application/x-zip-compressed",
+      "application/octet-stream",
+      "application/x-zip",
+    ];
+
+    if (kind === "materials" && !PDF_TYPES.includes(contentType)) {
       return NextResponse.json(
         { error: "The materials file must be a PDF" },
         { status: 400 }
       );
     }
-    if (kind === "source" && contentType !== "application/zip") {
+    if (kind === "source" && !ZIP_TYPES.includes(contentType)) {
       return NextResponse.json(
         { error: "The source code file must be a ZIP" },
         { status: 400 }
