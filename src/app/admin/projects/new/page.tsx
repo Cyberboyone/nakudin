@@ -13,18 +13,113 @@ export default function NewProjectPage() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const title = (formData.get("title") as string) || "";
+    const departmentName = (formData.get("departmentName") as string) || "";
+    const year = Number(formData.get("year"));
+    const level = formData.get("level") as string;
+    const abstract = (formData.get("abstract") as string) || "";
+    const tags = (formData.get("tags") as string) || "";
+    const status = (formData.get("status") as string) || "DRAFT";
+    const softwareChecked = (formData.get("isSoftware") as string) === "on";
+
+    const materialsFile = (formData.get("materialsFile") as File) || null;
+    const sourceCodeFile = (formData.get("sourceCodeFile") as File) || null;
+    const screenshotFile = (formData.get("screenshotFile") as File) || null;
+
+    if (!materialsFile) {
+      setError("A materials PDF is required.");
+      setSubmitting(false);
+      return;
+    }
+    if (softwareChecked && !sourceCodeFile) {
+      setError("A source code ZIP is required for a software project.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const formData = new FormData(e.currentTarget);
-      const res = await fetch("/api/admin/projects", {
+      // 1. Ask the server for short-lived presigned PUT URLs + an allocated slug.
+      const requestedFiles: { kind: string; filename: string; contentType: string }[] = [
+        {
+          kind: "materials",
+          filename: "materials.pdf",
+          contentType: materialsFile.type || "application/pdf",
+        },
+      ];
+      if (softwareChecked && sourceCodeFile) {
+        requestedFiles.push({
+          kind: "source",
+          filename: "source.zip",
+          contentType: sourceCodeFile.type || "application/zip",
+        });
+      }
+      if (softwareChecked && screenshotFile) {
+        requestedFiles.push({
+          kind: "screenshot",
+          filename: screenshotFile.name || "screenshot.png",
+          contentType: screenshotFile.type || "image/png",
+        });
+      }
+
+      const urlRes = await fetch("/api/admin/upload-url", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, year, files: requestedFiles }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+      if (!urlRes.ok) {
+        const body = await urlRes.json().catch(() => ({}));
+        throw new Error(body.error ?? "Could not prepare the upload");
+      }
+      const { slug, uploads } = await urlRes.json();
+
+      // 2. PUT each file straight to R2.
+      const keys: Record<string, string> = {};
+
+      const material = uploads.find((u: { kind: string }) => u.kind === "materials");
+      if (material) {
+        await putFile(material.url, materialsFile);
+        keys.materialsKey = material.key;
+      }
+
+      const source = uploads.find((u: { kind: string }) => u.kind === "source");
+      if (source && sourceCodeFile) {
+        await putFile(source.url, sourceCodeFile);
+        keys.sourceCodeKey = source.key;
+      }
+
+      const screenshot = uploads.find((u: { kind: string }) => u.kind === "screenshot");
+      if (screenshot && screenshotFile) {
+        await putFile(screenshot.url, screenshotFile);
+        keys.screenshotKey = screenshot.key;
+      }
+
+      // 3. Create the project record with just the metadata + R2 keys.
+      const createRes = await fetch("/api/admin/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          departmentName,
+          year,
+          level,
+          abstract,
+          tags,
+          isSoftware: softwareChecked,
+          status,
+          slug,
+          ...keys,
+        }),
+      });
+      if (!createRes.ok) {
+        const body = await createRes.json().catch(() => ({}));
         throw new Error(body.error ?? "Upload failed");
       }
-      const { slug } = await res.json();
-      router.push(`/project/${slug}`);
+      const created = await createRes.json();
+      router.push(`/project/${created.slug}`);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -103,6 +198,9 @@ export default function NewProjectPage() {
           </select>
         </div>
 
+        {submitting && (
+          <p className="text-sm text-muted">Uploading files to R2, then creating the project…</p>
+        )}
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         <button
@@ -130,6 +228,20 @@ export default function NewProjectPage() {
       `}</style>
     </div>
   );
+}
+
+/** PUT a file to a presigned R2 URL. Returns once the upload is confirmed. */
+async function putFile(url: string, file: File): Promise<void> {
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    throw new Error("Uploading the file to storage failed. Please try again.");
+  }
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

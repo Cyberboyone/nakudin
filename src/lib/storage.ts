@@ -86,6 +86,35 @@ export async function deleteFile(key: string): Promise<void> {
 }
 
 /**
+ * Short-lived presigned PUT URL so the browser can upload the file directly
+ * to R2 — keeps multi-megabyte uploads off the Vercel function (which caps
+ * request bodies around 4.5MB on Hobby). The URL is time-limited and scoped
+ * to one object, so it can't be reused to clobber other files.
+ */
+export async function getUploadUrl(
+  key: string,
+  contentType: string,
+  expiresInSeconds = 900
+): Promise<string> {
+  const s3 = getClient();
+  const command = new PutObjectCommand({
+    Bucket: BUCKET(),
+    Key: key,
+    ContentType: contentType,
+  });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+}
+
+/** Fetch an object from R2 into memory (used server-side, e.g. to build a
+ *  preview from the materials PDF the browser just uploaded directly). */
+export async function downloadFile(key: string): Promise<Buffer> {
+  const s3 = getClient();
+  const result = await s3.send(new GetObjectCommand({ Bucket: BUCKET(), Key: key }));
+  const bytes = await result.Body?.transformToByteArray();
+  return Buffer.from(bytes ?? []);
+}
+
+/**
  * Public URL for files meant to be freely viewable (previews, screenshots).
  * Requires the R2 bucket's public access (or a custom domain) to be enabled —
  * set R2_PUBLIC_BASE_URL to that URL in your env.

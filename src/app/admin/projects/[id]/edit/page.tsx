@@ -25,6 +25,7 @@ export default async function EditProjectPage({ params }: Props) {
           tags: project.tags.join(", "),
           isSoftware: project.isSoftware,
           status: project.status,
+          slug: project.slug,
         }}
       />
     </div>

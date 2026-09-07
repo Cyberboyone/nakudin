@@ -13,6 +13,7 @@ type Project = {
   tags: string;
   isSoftware: boolean;
   status: "DRAFT" | "PUBLISHED";
+  slug: string;
 };
 
 export default function EditProjectForm({ project }: { project: Project }) {
@@ -25,11 +26,93 @@ export default function EditProjectForm({ project }: { project: Project }) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const title = (formData.get("title") as string) || "";
+    const departmentName = (formData.get("departmentName") as string) || "";
+    const year = Number(formData.get("year"));
+    const level = formData.get("level") as string;
+    const abstract = (formData.get("abstract") as string) || "";
+    const tags = (formData.get("tags") as string) || "";
+    const status = (formData.get("status") as string) || "DRAFT";
+    const softwareChecked = (formData.get("isSoftware") as string) === "on";
+
+    const materialsFile = (formData.get("materialsFile") as File) || null;
+    const sourceCodeFile = (formData.get("sourceCodeFile") as File) || null;
+    const screenshotFile = (formData.get("screenshotFile") as File) || null;
+
     try {
-      const formData = new FormData(e.currentTarget);
+      // Ask for presigned PUT URLs only for the files being replaced.
+      const requestedFiles: { kind: string; filename: string; contentType: string }[] = [];
+      if (materialsFile && materialsFile.size > 0) {
+        requestedFiles.push({
+          kind: "materials",
+          filename: "materials.pdf",
+          contentType: materialsFile.type || "application/pdf",
+        });
+      }
+      if (softwareChecked && sourceCodeFile && sourceCodeFile.size > 0) {
+        requestedFiles.push({
+          kind: "source",
+          filename: "source.zip",
+          contentType: sourceCodeFile.type || "application/zip",
+        });
+      }
+      if (softwareChecked && screenshotFile && screenshotFile.size > 0) {
+        requestedFiles.push({
+          kind: "screenshot",
+          filename: screenshotFile.name || "screenshot.png",
+          contentType: screenshotFile.type || "image/png",
+        });
+      }
+
+      const keys: Record<string, string> = {};
+
+      if (requestedFiles.length > 0) {
+        const urlRes = await fetch("/api/admin/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: project.slug, files: requestedFiles }),
+        });
+        if (!urlRes.ok) {
+          const body = await urlRes.json().catch(() => ({}));
+          throw new Error(body.error ?? "Could not prepare the upload");
+        }
+        const { uploads } = await urlRes.json();
+
+        const material = uploads.find((u: { kind: string }) => u.kind === "materials");
+        if (material && materialsFile) {
+          await putFile(material.url, materialsFile);
+          keys.materialsKey = material.key;
+        }
+
+        const source = uploads.find((u: { kind: string }) => u.kind === "source");
+        if (source && sourceCodeFile) {
+          await putFile(source.url, sourceCodeFile);
+          keys.sourceCodeKey = source.key;
+        }
+
+        const screenshot = uploads.find((u: { kind: string }) => u.kind === "screenshot");
+        if (screenshot && screenshotFile) {
+          await putFile(screenshot.url, screenshotFile);
+          keys.screenshotKey = screenshot.key;
+        }
+      }
+
       const res = await fetch(`/api/admin/projects/${project.id}`, {
         method: "PATCH",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          departmentName,
+          year,
+          level,
+          abstract,
+          tags,
+          isSoftware: softwareChecked,
+          status,
+          ...keys,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -118,6 +201,9 @@ export default function EditProjectForm({ project }: { project: Project }) {
         </select>
       </div>
 
+      {submitting && (
+        <p className="text-sm text-muted">Replacing files in storage, then saving…</p>
+      )}
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       <button
@@ -144,6 +230,20 @@ export default function EditProjectForm({ project }: { project: Project }) {
       `}</style>
     </form>
   );
+}
+
+/** PUT a file to a presigned R2 URL. Returns once the upload is confirmed. */
+async function putFile(url: string, file: File): Promise<void> {
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    throw new Error("Uploading the file to storage failed. Please try again.");
+  }
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

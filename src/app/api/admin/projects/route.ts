@@ -1,121 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { projects, projectTags } from "@/db/schema";
-import { upsertDepartmentByName, findOrCreateTag, slugExists } from "@/lib/queries";
-import { buildKey, uploadFile, deleteFile, StorageFolder } from "@/lib/storage";
+import { upsertDepartmentByName, findOrCreateTag } from "@/lib/queries";
+import {
+  buildKey,
+  uploadFile,
+  deleteFile,
+  downloadFile,
+  StorageFolder,
+} from "@/lib/storage";
 import { extractPreviewPages } from "@/lib/pdf-preview";
 
 // Auth for this route is enforced in src/proxy.ts (matches /api/admin/:path*),
 // not here — a request only reaches this handler with a valid admin session.
-
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-/** Appends -2, -3, etc. until a free slug is found, so same-title/year
- *  projects (or repeated retries) never silently collide or overwrite
- *  another project's files in storage. */
-async function findAvailableSlug(baseSlug: string): Promise<string> {
-  let candidate = baseSlug;
-  let attempt = 2;
-  while (await slugExists(candidate)) {
-    candidate = `${baseSlug}-${attempt}`;
-    attempt += 1;
-  }
-  return candidate;
-}
+//
+// File uploads do NOT come through this request. The browser PUTs the materials
+// PDF / source ZIP / screenshot straight to R2 via a short-lived presigned URL
+// (see /api/admin/upload-url) because Vercel's serverless functions cap request
+// bodies (~4.5MB on Hobby). This route only receives the metadata plus the R2
+// file keys the browser was given, then builds the preview from the PDF in R2.
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
-  const title = formData.get("title") as string;
-  const departmentName = formData.get("departmentName") as string;
-  const year = Number(formData.get("year"));
-  const level = formData.get("level") as "UNDERGRADUATE" | "POSTGRADUATE";
-  const abstract = formData.get("abstract") as string;
-  const tagsRaw = (formData.get("tags") as string) ?? "";
-  const isSoftware = formData.get("isSoftware") === "on";
-  const status = (formData.get("status") as "DRAFT" | "PUBLISHED") ?? "DRAFT";
+  const title = typeof body.title === "string" ? body.title : "";
+  const departmentName = typeof body.departmentName === "string" ? body.departmentName : "";
+  const year = Number(body.year);
+  const level = body.level as "UNDERGRADUATE" | "POSTGRADUATE";
+  const abstract = typeof body.abstract === "string" ? body.abstract : "";
+  const slug = typeof body.slug === "string" ? body.slug : "";
+  const tagsRaw = String(body?.tags ?? "");
+  const isSoftware = body.isSoftware === true;
+  const status = body.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
 
-  const materialsFile = formData.get("materialsFile") as File | null;
-  const sourceCodeFile = formData.get("sourceCodeFile") as File | null;
-  const screenshotFile = formData.get("screenshotFile") as File | null;
+  const materialsKey = typeof body.materialsKey === "string" ? body.materialsKey : "";
+  const sourceCodeKey = typeof body.sourceCodeKey === "string" ? body.sourceCodeKey : "";
+  const screenshotKey = typeof body.screenshotKey === "string" ? body.screenshotKey : "";
 
-  if (!title || !departmentName || !year || !level || !abstract) {
+  if (!title || !departmentName || !year || !level || !abstract || !slug) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
-  if (!materialsFile || materialsFile.size === 0) {
+  if (!materialsKey) {
+    return NextResponse.json({ error: "The materials PDF was not uploaded" }, { status: 400 });
+  }
+  if (isSoftware && !sourceCodeKey) {
     return NextResponse.json(
-      { error: "A materials PDF is required" },
+      { error: "The source code ZIP was not uploaded" },
       { status: 400 }
     );
   }
-  if (isSoftware && (!sourceCodeFile || sourceCodeFile.size === 0)) {
-    return NextResponse.json(
-      { error: "Source code ZIP is required for a software project" },
-      { status: 400 }
-    );
-  }
-
-  // Resolve the slug BEFORE any upload happens — uploads use the slug as
-  // part of the R2 key, so this must be collision-free first or a same
-  // title+year project could silently overwrite another project's files.
-  const baseSlug = `${slugify(title)}-${year}`;
-  const slug = await findAvailableSlug(baseSlug);
 
   const department = await upsertDepartmentByName(departmentName, slugify(departmentName));
 
-  // Track every key we upload so we can clean up on failure rather than
-  // leaving orphaned files in R2 if a later step (e.g. the DB insert) fails.
-  const uploadedKeys: string[] = [];
+  // Track every key we might write so a failed attempt cleans up after itself
+  // instead of leaving orphaned files in R2.
+  const uploadedKeys = [materialsKey];
 
   try {
-    const materialsBuffer = Buffer.from(await materialsFile.arrayBuffer());
-    const materialsKey = buildKey(StorageFolder.Materials, slug, "materials.pdf");
-    await uploadFile(materialsKey, materialsBuffer, "application/pdf");
-    uploadedKeys.push(materialsKey);
-
-    let previewBuffer: Buffer;
+    // Build the 10-page preview from the PDF the browser uploaded directly.
+    let previewKey = "";
     try {
-      previewBuffer = await extractPreviewPages(materialsBuffer, 10);
+      const materialsBuffer = await downloadFile(materialsKey);
+      const previewBuffer = await extractPreviewPages(materialsBuffer, 10);
+      previewKey = buildKey(StorageFolder.Previews, slug, "preview.pdf");
+      await uploadFile(previewKey, previewBuffer, "application/pdf");
+      uploadedKeys.push(previewKey);
     } catch {
       throw new Error(
         "Could not read that PDF to generate a preview — please check the file isn't corrupted."
       );
     }
-    const previewKey = buildKey(StorageFolder.Previews, slug, "preview.pdf");
-    await uploadFile(previewKey, previewBuffer, "application/pdf");
-    uploadedKeys.push(previewKey);
 
-    let sourceCodeKey: string | undefined;
-    if (isSoftware && sourceCodeFile && sourceCodeFile.size > 0) {
-      sourceCodeKey = buildKey(StorageFolder.SourceCode, slug, "source.zip");
-      await uploadFile(
-        sourceCodeKey,
-        Buffer.from(await sourceCodeFile.arrayBuffer()),
-        "application/zip"
-      );
-      uploadedKeys.push(sourceCodeKey);
-    }
-
-    let screenshotKey: string | undefined;
-    if (isSoftware && screenshotFile && screenshotFile.size > 0) {
-      screenshotKey = buildKey(
-        StorageFolder.Screenshots,
-        slug,
-        screenshotFile.name || "screenshot.png"
-      );
-      await uploadFile(
-        screenshotKey,
-        Buffer.from(await screenshotFile.arrayBuffer()),
-        screenshotFile.type || "image/png"
-      );
-      uploadedKeys.push(screenshotKey);
-    }
+    if (sourceCodeKey) uploadedKeys.push(sourceCodeKey);
+    if (screenshotKey) uploadedKeys.push(screenshotKey);
 
     const [project] = await db
       .insert(projects)
@@ -130,8 +90,8 @@ export async function POST(req: NextRequest) {
         departmentId: department.id,
         materialsFileKey: materialsKey,
         previewFileKey: previewKey,
-        sourceCodeFileKey: sourceCodeKey,
-        screenshotFileKey: screenshotKey,
+        sourceCodeFileKey: sourceCodeKey || null,
+        screenshotFileKey: screenshotKey || null,
       })
       .returning();
 
@@ -147,10 +107,18 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ id: project.id, slug: project.slug });
   } catch (err) {
-    // Clean up anything we already uploaded so a failed attempt doesn't
-    // leave orphaned files sitting in R2 forever.
+    // Clean up everything we wrote so a failed attempt doesn't leave orphaned
+    // files sitting in R2 forever.
     await Promise.all(uploadedKeys.map((key) => deleteFile(key).catch(() => {})));
     const message = err instanceof Error ? err.message : "Upload failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }

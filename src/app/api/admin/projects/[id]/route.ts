@@ -6,7 +6,13 @@ import {
   deleteProjectById,
   upsertDepartmentByName,
 } from "@/lib/queries";
-import { buildKey, uploadFile, deleteFile, StorageFolder } from "@/lib/storage";
+import {
+  buildKey,
+  uploadFile,
+  deleteFile,
+  downloadFile,
+  StorageFolder,
+} from "@/lib/storage";
 import { extractPreviewPages } from "@/lib/pdf-preview";
 
 function slugify(input: string): string {
@@ -27,20 +33,29 @@ export async function PATCH(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const formData = await req.formData();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
-  const title = formData.get("title") as string;
-  const departmentName = formData.get("departmentName") as string;
-  const year = Number(formData.get("year"));
-  const level = formData.get("level") as "UNDERGRADUATE" | "POSTGRADUATE";
-  const abstract = formData.get("abstract") as string;
-  const tagsRaw = (formData.get("tags") as string) ?? "";
-  const isSoftware = formData.get("isSoftware") === "on";
-  const status = (formData.get("status") as "DRAFT" | "PUBLISHED") ?? "DRAFT";
+  const title = typeof body.title === "string" ? body.title : "";
+  const departmentName = typeof body.departmentName === "string" ? body.departmentName : "";
+  const year = Number(body.year);
+  const level = body.level as "UNDERGRADUATE" | "POSTGRADUATE";
+  const abstract = typeof body.abstract === "string" ? body.abstract : "";
+  const tagsRaw = String(body?.tags ?? "");
+  const isSoftware = body.isSoftware === true;
+  const status = body.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
 
-  const materialsFile = formData.get("materialsFile") as File | null;
-  const sourceCodeFile = formData.get("sourceCodeFile") as File | null;
-  const screenshotFile = formData.get("screenshotFile") as File | null;
+  // Keys for files the browser uploaded directly to R2 (only present when a
+  // replacement was chosen). Nothing else arrives as a file body on this route.
+  const materialsKey = typeof body.materialsKey === "string" ? body.materialsKey : "";
+  const sourceCodeKey = typeof body.sourceCodeKey === "string" ? body.sourceCodeKey : "";
+  const screenshotKey = typeof body.screenshotKey === "string" ? body.screenshotKey : "";
+
+  if (!title || !departmentName || !year || !level || !abstract) {
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
 
   const department = await upsertDepartmentByName(departmentName, slugify(departmentName));
 
@@ -54,61 +69,74 @@ export async function PATCH(
     departmentId: department.id,
   };
 
-  // Only touch files the admin actually re-uploaded — leave the rest as-is.
-  if (materialsFile && materialsFile.size > 0) {
-    const materialsBuffer = Buffer.from(await materialsFile.arrayBuffer());
-    const materialsKey = buildKey(StorageFolder.Materials, existing.slug, "materials.pdf");
-    await uploadFile(materialsKey, materialsBuffer, "application/pdf");
-    updates.materialsFileKey = materialsKey;
+  const uploadedKeys: string[] = [];
 
-    const previewBuffer = await extractPreviewPages(materialsBuffer, 10);
-    const previewKey = buildKey(StorageFolder.Previews, existing.slug, "preview.pdf");
-    await uploadFile(previewKey, previewBuffer, "application/pdf");
-    updates.previewFileKey = previewKey;
-  }
+  try {
+    // Replace the materials PDF only if a new one was uploaded — and rebuild
+    // the preview from it, cleaning up the old preview file.
+    if (materialsKey) {
+      uploadedKeys.push(materialsKey);
+      const materialsBuffer = await downloadFile(materialsKey);
+      const previewBuffer = await extractPreviewPages(materialsBuffer, 10);
+      const previewKey = buildKey(StorageFolder.Previews, existing.slug, "preview.pdf");
 
-  if (isSoftware && sourceCodeFile && sourceCodeFile.size > 0) {
-    const sourceCodeKey = buildKey(StorageFolder.SourceCode, existing.slug, "source.zip");
-    await uploadFile(
-      sourceCodeKey,
-      Buffer.from(await sourceCodeFile.arrayBuffer()),
-      "application/zip"
-    );
-    updates.sourceCodeFileKey = sourceCodeKey;
-  } else if (!isSoftware) {
-    // Switched from software to non-software — drop the old source file reference.
-    if (existing.sourceCodeFileKey) {
-      await deleteFile(existing.sourceCodeFileKey).catch(() => {});
+      // Upload the new preview, then remove the old materials + preview files.
+      await uploadFile(previewKey, previewBuffer, "application/pdf");
+      uploadedKeys.push(previewKey);
+      await Promise.all(
+        [existing.materialsFileKey, existing.previewFileKey]
+          .filter((key): key is string => Boolean(key) && key !== materialsKey && key !== previewKey)
+          .map((key) => deleteFile(key).catch(() => {}))
+      );
+
+      updates.materialsFileKey = materialsKey;
+      updates.previewFileKey = previewKey;
     }
-    updates.sourceCodeFileKey = null;
-  }
 
-  if (isSoftware && screenshotFile && screenshotFile.size > 0) {
-    const screenshotKey = buildKey(
-      StorageFolder.Screenshots,
-      existing.slug,
-      screenshotFile.name || "screenshot.png"
-    );
-    await uploadFile(
-      screenshotKey,
-      Buffer.from(await screenshotFile.arrayBuffer()),
-      screenshotFile.type || "image/png"
-    );
-    updates.screenshotFileKey = screenshotKey;
-  } else if (!isSoftware) {
-    if (existing.screenshotFileKey) {
-      await deleteFile(existing.screenshotFileKey).catch(() => {});
+    if (sourceCodeKey) {
+      uploadedKeys.push(sourceCodeKey);
+      await Promise.all(
+        [existing.sourceCodeFileKey]
+          .filter((key): key is string => Boolean(key) && key !== sourceCodeKey)
+          .map((key) => deleteFile(key).catch(() => {}))
+      );
+      updates.sourceCodeFileKey = sourceCodeKey;
+    } else if (!isSoftware) {
+      // Switched from software to non-software — drop the old source file reference.
+      if (existing.sourceCodeFileKey) {
+        await deleteFile(existing.sourceCodeFileKey).catch(() => {});
+      }
+      updates.sourceCodeFileKey = null;
     }
-    updates.screenshotFileKey = null;
+
+    if (screenshotKey) {
+      uploadedKeys.push(screenshotKey);
+      await Promise.all(
+        [existing.screenshotFileKey]
+          .filter((key): key is string => Boolean(key) && key !== screenshotKey)
+          .map((key) => deleteFile(key).catch(() => {}))
+      );
+      updates.screenshotFileKey = screenshotKey;
+    } else if (!isSoftware) {
+      if (existing.screenshotFileKey) {
+        await deleteFile(existing.screenshotFileKey).catch(() => {});
+      }
+      updates.screenshotFileKey = null;
+    }
+
+    await updateProjectFields(id, updates);
+
+    const tagNames = tagsRaw
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    await replaceProjectTags(id, tagNames);
+  } catch (err) {
+    // Best-effort cleanup of anything this edit uploaded before it failed.
+    await Promise.all(uploadedKeys.map((key) => deleteFile(key).catch(() => {})));
+    const message = err instanceof Error ? err.message : "Update failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  await updateProjectFields(id, updates);
-
-  const tagNames = tagsRaw
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  await replaceProjectTags(id, tagNames);
 
   return NextResponse.json({ ok: true });
 }
