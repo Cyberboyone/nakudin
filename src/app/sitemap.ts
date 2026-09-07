@@ -6,7 +6,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const BASE_URL = "https://nakudin.com";
+const BASE_URL = "https://www.nakudin.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [projectRows, departmentRows] = await Promise.all([

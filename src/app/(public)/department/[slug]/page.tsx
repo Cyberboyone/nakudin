@@ -5,7 +5,7 @@ import { getDepartmentBySlug, getPublishedProjectsByDepartment } from "@/lib/que
 
 export const dynamic = "force-dynamic";
 
-const BASE_URL = "https://nakudin.com";
+const BASE_URL = "https://www.nakudin.com";
 
 type Props = {
   params: Promise<{ slug: string }>;

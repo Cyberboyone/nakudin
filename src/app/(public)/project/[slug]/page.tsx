@@ -7,7 +7,7 @@ import DownloadButton from "@/components/DownloadButton";
 
 export const dynamic = "force-dynamic";
 
-const BASE_URL = "https://nakudin.com";
+const BASE_URL = "https://www.nakudin.com";
 
 type Props = { params: Promise<{ slug: string }> };
 
