@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CookieConsent from "@/components/CookieConsent";
+import SiteNav from "@/components/SiteNav";
+import { getDepartmentsWithCounts } from "@/lib/queries";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,7 +11,17 @@ export const metadata: Metadata = {
     "Free final year project source code and materials for Nigerian university students, by department and level. Nakudin.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Departments feed the nav dropdown. If the query fails (DB down, cold
+  // start, etc.), render the nav with an empty list rather than failing the
+  // whole app.
+  let departments: Awaited<ReturnType<typeof getDepartmentsWithCounts>> = [];
+  try {
+    departments = await getDepartmentsWithCounts();
+  } catch {
+    departments = [];
+  }
+
   return (
     <html lang="en" className="h-full antialiased">
       <head>
@@ -21,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col bg-ink text-text">
-        <header className="border-b border-border">
+        <header className="relative border-b border-border">
           <div className="mx-auto max-w-5xl px-6 py-5 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5">
               <span className="h-2 w-2 rounded-full bg-lamp" aria-hidden />
@@ -29,14 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 Nakudin
               </span>
             </Link>
-            <nav className="flex items-center gap-6 text-sm text-muted">
-              <Link href="/?level=UNDERGRADUATE" className="hover:text-text transition-colors">
-                Undergraduate
-              </Link>
-              <Link href="/?level=POSTGRADUATE" className="hover:text-text transition-colors">
-                Postgraduate
-              </Link>
-            </nav>
+            <SiteNav departments={departments} />
           </div>
         </header>
         <main className="flex-1">{children}</main>

@@ -66,7 +66,7 @@ export default async function HomePage() {
       </section>
 
       {/* Department index — variable-size cards, weighted by how much is there */}
-      <section className="py-14 border-b border-border">
+      <section id="browse" className="py-14 border-b border-border scroll-mt-16">
         <h2 className="font-display text-xl mb-6">Browse by department</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {departments.map((dept, i) => {

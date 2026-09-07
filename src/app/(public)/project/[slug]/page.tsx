@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import { getProjectBySlug, getRelatedProjects, incrementViewCount } from "@/lib/queries";
 import { safePublicUrl } from "@/lib/storage";
 import DownloadButton from "@/components/DownloadButton";
@@ -61,12 +62,18 @@ export default async function ProjectPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <Link
-        href={`/department/${project.departmentSlug}`}
-        className="text-sm text-muted hover:text-text transition-colors"
-      >
-        ← {project.departmentName}
-      </Link>
+      <Breadcrumbs
+        items={[
+          {
+            label: project.departmentName,
+            href: `/department/${project.departmentSlug}`,
+          },
+          {
+            label: project.title,
+            href: `/project/${project.slug}`,
+          },
+        ]}
+      />
 
       <h1 className="font-display text-3xl md:text-4xl leading-tight mt-3">
         {project.title}

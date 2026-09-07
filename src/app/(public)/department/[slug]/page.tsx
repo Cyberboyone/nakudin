@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import { getDepartmentBySlug, getPublishedProjectsByDepartment } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -65,9 +66,7 @@ export default async function DepartmentPage({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
-      <Link href="/" className="text-sm text-muted hover:text-text transition-colors">
-        ← All departments
-      </Link>
+      <Breadcrumbs items={[{ label: department.name, href: `/department/${department.slug}` }]} />
       <h1 className="font-display text-3xl mt-3 mb-6">{department.name}</h1>
 
       <div className="flex gap-2 mb-8">
