@@ -6,7 +6,7 @@ export default function PrivacyPage() {
       <h1 className="font-display text-3xl mb-8">Privacy Policy</h1>
 
       <div className="space-y-8 text-text/90 leading-relaxed">
-        <p className="text-sm text-muted">Last updated: [add the date you publish this]</p>
+        <p className="text-sm text-muted">Last updated: September 8, 2026</p>
 
         <section>
           <h2 className="font-display text-lg mb-2">What Nakudin is</h2>

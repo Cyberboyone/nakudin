@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDepartmentsWithCounts, getRecentPublishedProjects } from "@/lib/queries";
+import { Input } from "@/components/ui/Input";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +29,15 @@ export default async function HomePage() {
             entry includes the complete write-up.
           </p>
           <form action="/search" className="mt-8 flex gap-2 max-w-md">
-            <input
+            <Input
               name="q"
               type="search"
               placeholder="Search by title or topic"
-              className="flex-1 border border-border bg-surface px-4 py-2.5 text-sm placeholder:text-muted focus:outline-none focus:border-lamp"
+              className="flex-1"
             />
             <button
               type="submit"
-              className="bg-lamp text-ink font-medium px-5 py-2.5 text-sm hover:brightness-110 transition"
+              className="cursor-pointer shrink-0 bg-lamp text-ink font-medium px-5 py-2.5 text-sm hover:brightness-110 transition active:translate-y-px"
             >
               Search
             </button>
@@ -75,7 +76,7 @@ export default async function HomePage() {
               <Link
                 key={dept.id}
                 href={`/department/${dept.slug}`}
-                className={`group border border-border bg-surface px-5 py-5 hover:border-lamp/60 transition-colors ${
+                className={`group border border-border bg-surface px-5 py-5 hover:border-lamp/60 transition-all duration-200 ease-out hover:-translate-y-0.5 ${
                   featured ? "col-span-2 md:col-span-2 row-span-1" : ""
                 }`}
               >
@@ -106,7 +107,7 @@ export default async function HomePage() {
         <ul className="divide-y divide-border border-y border-border">
           {recentProjects.map((p) => (
             <li key={p.id} className="py-4">
-              <Link href={`/project/${p.slug}`} className="group flex items-start justify-between gap-4">
+              <Link href={`/project/${p.slug}`} className="group -mx-3 flex items-start justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-surface">
                 <div>
                   <p className="font-display text-lg group-hover:text-lamp transition-colors">
                     {p.title}
@@ -117,7 +118,7 @@ export default async function HomePage() {
                   </p>
                 </div>
                 {p.isSoftware && (
-                  <span className="shrink-0 text-xs text-lamp border border-lamp/40 px-2 py-1">
+                  <span className="shrink-0 text-xs text-lamp border border-lamp/40 px-2 py-1 rounded">
                     Code + materials
                   </span>
                 )}

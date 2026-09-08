@@ -6,7 +6,7 @@ export default function TermsPage() {
       <h1 className="font-display text-3xl mb-8">Terms of Use</h1>
 
       <div className="space-y-8 text-text/90 leading-relaxed">
-        <p className="text-sm text-muted">Last updated: [add the date you publish this]</p>
+        <p className="text-sm text-muted">Last updated: September 8, 2026</p>
 
         <section>
           <p>

@@ -34,7 +34,7 @@ export default function Breadcrumbs({ items }: { items: Crumb[] }) {
                   {c.label}
                 </span>
               ) : (
-                <Link href={c.href} className="hover:text-text transition-colors">
+                <Link href={c.href} className="cursor-pointer hover:text-text transition-colors">
                   {c.label}
                 </Link>
               )}

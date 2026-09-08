@@ -74,7 +74,8 @@ export default async function DepartmentPage({ params, searchParams }: Props) {
           <Link
             key={f.label}
             href={f.href}
-            className={`text-sm px-3.5 py-1.5 border transition-colors ${
+            aria-current={f.active ? "page" : undefined}
+            className={`cursor-pointer text-sm px-3.5 py-1.5 border transition-colors ${
               f.active
                 ? "bg-lamp text-ink border-lamp"
                 : "border-border text-muted hover:text-text hover:border-text/40"
@@ -88,7 +89,7 @@ export default async function DepartmentPage({ params, searchParams }: Props) {
       <ul className="divide-y divide-border border-y border-border">
         {projects.map((p) => (
           <li key={p.id} className="py-4">
-            <Link href={`/project/${p.slug}`} className="group flex items-start justify-between gap-4">
+            <Link href={`/project/${p.slug}`} className="group -mx-3 flex items-start justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-surface">
               <div>
                 <p className="font-display text-lg group-hover:text-lamp transition-colors">
                   {p.title}
@@ -99,7 +100,7 @@ export default async function DepartmentPage({ params, searchParams }: Props) {
                 </p>
               </div>
               {p.isSoftware && (
-                <span className="shrink-0 text-xs text-lamp border border-lamp/40 px-2 py-1">
+                <span className="shrink-0 text-xs text-lamp border border-lamp/40 px-2 py-1 rounded">
                   Code + materials
                 </span>
               )}
@@ -107,7 +108,15 @@ export default async function DepartmentPage({ params, searchParams }: Props) {
           </li>
         ))}
         {projects.length === 0 && (
-          <li className="py-6 text-sm text-muted">No projects in this category yet.</li>
+          <li className="py-10 text-sm text-muted text-center">
+            No projects in this category yet.
+            <br />
+            Try another department, or{" "}
+            <Link href="/#browse" className="text-lamp hover:underline">
+              browse all departments
+            </Link>
+            .
+          </li>
         )}
       </ul>
     </div>

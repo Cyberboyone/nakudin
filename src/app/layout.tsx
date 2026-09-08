@@ -33,6 +33,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col bg-ink text-text">
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <header className="relative border-b border-border">
           <div className="mx-auto max-w-5xl px-6 py-5 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5">
@@ -44,7 +47,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <SiteNav departments={departments} />
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main id="main-content" className="flex-1">{children}</main>
         <footer className="border-t border-border">
           <div className="mx-auto max-w-5xl px-6 py-8 text-sm text-muted flex flex-col sm:flex-row justify-between gap-3">
             <span>Nakudin — free for students</span>

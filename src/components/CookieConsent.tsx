@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { Button } from "@/components/ui/Button";
 
 const CONSENT_COOKIE = "nakudin_cookie_consent";
 
@@ -54,12 +55,9 @@ export default function CookieConsent() {
           </a>{" "}
           for details.
         </p>
-        <button
-          onClick={accept}
-          className="shrink-0 bg-lamp text-ink font-medium px-4 py-2 text-sm hover:brightness-110 transition"
-        >
+        <Button variant="secondary" onClick={accept} className="shrink-0">
           Got it
-        </button>
+        </Button>
       </div>
     </div>
   );

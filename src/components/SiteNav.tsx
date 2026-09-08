@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Input } from "@/components/ui/Input";
 
 type DepartmentLink = { name: string; slug: string; projectCount: number };
 
@@ -55,7 +56,7 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
             type="button"
             aria-expanded={deptOpen}
             onClick={() => setDeptOpen((o) => !o)}
-            className={`flex items-center gap-1.5 ${activeClass(isActive("/department"))}`}
+            className={`flex cursor-pointer items-center gap-1.5 ${activeClass(isActive("/department"))}`}
           >
             Departments
             <svg
@@ -131,7 +132,7 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
             name="q"
             type="search"
             placeholder="Search projects"
-            className="w-32 bg-transparent text-sm placeholder:text-muted/60 focus:outline-none"
+            className="w-32 cursor-pointer bg-transparent text-sm placeholder:text-muted/60 focus:outline-none"
           />
         </form>
         <Link
@@ -162,7 +163,7 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((o) => !o)}
-          className="text-muted hover:text-text transition-colors"
+          className="text-muted hover:text-text transition-colors cursor-pointer"
         >
           {menuOpen ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -179,15 +180,15 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
       {menuOpen && (
         <div className="md:hidden absolute left-0 right-0 top-full border-b border-border bg-ink px-6 py-5">
           <form action="/search" className="flex gap-2 mb-5">
-            <input
+            <Input
               name="q"
               type="search"
               placeholder="Search projects"
-              className="flex-1 border border-border bg-surface px-4 py-2.5 text-sm placeholder:text-muted/60 focus:outline-none focus:border-lamp"
+              className="flex-1"
             />
             <button
               type="submit"
-              className="bg-lamp text-ink font-medium px-4 py-2.5 text-sm hover:brightness-110 transition"
+              className="cursor-pointer bg-lamp text-ink font-medium px-4 py-2.5 text-sm hover:brightness-110 transition"
             >
               Search
             </button>

@@ -89,7 +89,7 @@ export default async function ProjectPage({ params }: Props) {
           {project.tags.map((tag) => (
             <span
               key={tag}
-              className="text-sm text-muted border border-border px-2.5 py-1"
+              className="text-sm text-muted border border-border px-2.5 py-1 rounded"
             >
               {tag}
             </span>
@@ -129,7 +129,7 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-3 border-y border-border py-6">
+      <div className="flex flex-wrap items-start gap-3 border-y border-border py-6">
         <DownloadButton
           projectId={project.id}
           fileType="materials"
@@ -163,7 +163,10 @@ export default async function ProjectPage({ params }: Props) {
           <ul className="divide-y divide-border border-y border-border">
             {relatedProjects.map((p) => (
               <li key={p.id} className="py-3">
-                <Link href={`/project/${p.slug}`} className="hover:text-lamp transition-colors">
+                <Link
+                  href={`/project/${p.slug}`}
+                  className="-mx-3 block rounded-lg px-3 py-2 transition-colors hover:bg-surface hover:text-lamp"
+                >
                   {p.title}
                 </Link>
               </li>
