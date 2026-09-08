@@ -38,6 +38,7 @@ export default function EditProjectForm({ project }: { project: Project }) {
     const softwareChecked = (formData.get("isSoftware") as string) === "on";
 
     const materialsFile = (formData.get("materialsFile") as File) || null;
+    const materialsWordFile = (formData.get("materialsWordFile") as File) || null;
     const sourceCodeFile = (formData.get("sourceCodeFile") as File) || null;
     const screenshotFile = (formData.get("screenshotFile") as File) || null;
 
@@ -49,6 +50,16 @@ export default function EditProjectForm({ project }: { project: Project }) {
           kind: "materials",
           filename: "materials.pdf",
           contentType: materialsFile.type || "application/pdf",
+        });
+      }
+      if (materialsWordFile && materialsWordFile.size > 0) {
+        requestedFiles.push({
+          kind: "materialsWord",
+          filename:
+            materialsWordFile.type === "application/msword" ? "materials.doc" : "materials.docx",
+          contentType:
+            materialsWordFile.type ||
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         });
       }
       if (softwareChecked && sourceCodeFile && sourceCodeFile.size > 0) {
@@ -84,6 +95,12 @@ export default function EditProjectForm({ project }: { project: Project }) {
         if (material && materialsFile) {
           await putFile(material.url, materialsFile);
           keys.materialsKey = material.key;
+        }
+
+        const materialWord = uploads.find((u: { kind: string }) => u.kind === "materialsWord");
+        if (materialWord && materialsWordFile) {
+          await putFile(materialWord.url, materialsWordFile);
+          keys.materialsWordKey = materialWord.key;
         }
 
         const source = uploads.find((u: { kind: string }) => u.kind === "source");
@@ -180,6 +197,15 @@ export default function EditProjectForm({ project }: { project: Project }) {
 
       <Field label="Replace materials file (PDF) — leave empty to keep the current one">
         <input name="materialsFile" type="file" accept="application/pdf" className="input" />
+      </Field>
+
+      <Field label="Replace materials file (Word) — leave empty to keep the current one">
+        <input
+          name="materialsWordFile"
+          type="file"
+          accept=".docx,.doc,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="input"
+        />
       </Field>
 
       {isSoftware && (

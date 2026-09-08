@@ -135,6 +135,13 @@ export default async function ProjectPage({ params }: Props) {
           fileType="materials"
           label="Download materials (PDF)"
         />
+        {project.materialsWordFileKey && (
+          <DownloadButton
+            projectId={project.id}
+            fileType="word"
+            label="Download materials (Word)"
+          />
+        )}
         {project.isSoftware && project.sourceCodeFileKey && (
           <DownloadButton
             projectId={project.id}

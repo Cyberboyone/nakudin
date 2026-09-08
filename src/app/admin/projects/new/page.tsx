@@ -26,11 +26,17 @@ export default function NewProjectPage() {
     const softwareChecked = (formData.get("isSoftware") as string) === "on";
 
     const materialsFile = (formData.get("materialsFile") as File) || null;
+    const materialsWordFile = (formData.get("materialsWordFile") as File) || null;
     const sourceCodeFile = (formData.get("sourceCodeFile") as File) || null;
     const screenshotFile = (formData.get("screenshotFile") as File) || null;
 
     if (!materialsFile) {
       setError("A materials PDF is required.");
+      setSubmitting(false);
+      return;
+    }
+    if (!materialsWordFile) {
+      setError("A materials Word document is required.");
       setSubmitting(false);
       return;
     }
@@ -47,6 +53,13 @@ export default function NewProjectPage() {
           kind: "materials",
           filename: "materials.pdf",
           contentType: materialsFile.type || "application/pdf",
+        },
+        {
+          kind: "materialsWord",
+          filename: materialsWordFile.type === "application/msword" ? "materials.doc" : "materials.docx",
+          contentType:
+            materialsWordFile.type ||
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         },
       ];
       if (softwareChecked && sourceCodeFile) {
@@ -82,6 +95,12 @@ export default function NewProjectPage() {
       if (material) {
         await putFile(material.url, materialsFile);
         keys.materialsKey = material.key;
+      }
+
+      const materialWord = uploads.find((u: { kind: string }) => u.kind === "materialsWord");
+      if (materialWord && materialsWordFile) {
+        await putFile(materialWord.url, materialsWordFile);
+        keys.materialsWordKey = materialWord.key;
       }
 
       const source = uploads.find((u: { kind: string }) => u.kind === "source");
@@ -177,6 +196,16 @@ export default function NewProjectPage() {
 
         <Field label="Materials file (PDF)">
           <input name="materialsFile" type="file" accept="application/pdf" required className="input" />
+        </Field>
+
+        <Field label="Materials file (Word)">
+          <input
+            name="materialsWordFile"
+            type="file"
+            accept=".docx,.doc,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            required
+            className="input"
+          />
         </Field>
 
         {isSoftware && (

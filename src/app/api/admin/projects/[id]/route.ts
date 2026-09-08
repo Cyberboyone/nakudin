@@ -50,6 +50,7 @@ export async function PATCH(
   // Keys for files the browser uploaded directly to R2 (only present when a
   // replacement was chosen). Nothing else arrives as a file body on this route.
   const materialsKey = typeof body.materialsKey === "string" ? body.materialsKey : "";
+  const materialsWordKey = typeof body.materialsWordKey === "string" ? body.materialsWordKey : "";
   const sourceCodeKey = typeof body.sourceCodeKey === "string" ? body.sourceCodeKey : "";
   const screenshotKey = typeof body.screenshotKey === "string" ? body.screenshotKey : "";
 
@@ -91,6 +92,16 @@ export async function PATCH(
 
       updates.materialsFileKey = materialsKey;
       updates.previewFileKey = previewKey;
+    }
+
+    // Replace the Word materials only if a new one was uploaded. No preview
+    // rebuild needed — the preview always comes from the PDF.
+    if (materialsWordKey) {
+      uploadedKeys.push(materialsWordKey);
+      if (existing.materialsWordFileKey && existing.materialsWordFileKey !== materialsWordKey) {
+        await deleteFile(existing.materialsWordFileKey).catch(() => {});
+      }
+      updates.materialsWordFileKey = materialsWordKey;
     }
 
     if (sourceCodeKey) {
@@ -155,6 +166,7 @@ export async function DELETE(
   await Promise.all(
     [
       project.materialsFileKey,
+      project.materialsWordFileKey,
       project.previewFileKey,
       project.sourceCodeFileKey,
       project.screenshotFileKey,

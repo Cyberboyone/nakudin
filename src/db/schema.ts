@@ -36,6 +36,7 @@ export const projects = pgTable("projects", {
 
   // R2 object keys — never raw file data
   materialsFileKey: text("materials_file_key").notNull(),
+  materialsWordFileKey: text("materials_word_file_key"),
   previewFileKey: text("preview_file_key"),
   sourceCodeFileKey: text("source_code_file_key"),
   screenshotFileKey: text("screenshot_file_key"),

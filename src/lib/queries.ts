@@ -272,6 +272,7 @@ export async function updateProjectFields(
     status: "DRAFT" | "PUBLISHED";
     departmentId: string;
     materialsFileKey: string;
+    materialsWordFileKey: string | null;
     previewFileKey: string;
     sourceCodeFileKey: string | null;
     screenshotFileKey: string | null;

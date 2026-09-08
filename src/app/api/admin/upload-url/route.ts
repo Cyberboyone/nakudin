@@ -25,13 +25,18 @@ async function findAvailableSlug(baseSlug: string): Promise<string> {
 }
 
 /** The file kinds the upload form can send straight to R2. */
-type UploadKind = "materials" | "source" | "screenshot";
+type UploadKind = "materials" | "materialsWord" | "source" | "screenshot";
 
 const KIND_DEFAULTS: Record<UploadKind, { folder: string; filename: string; contentType: string }> = {
   materials: {
     folder: StorageFolder.Materials,
     filename: "materials.pdf",
     contentType: "application/pdf",
+  },
+  materialsWord: {
+    folder: StorageFolder.Materials,
+    filename: "materials.docx",
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   },
   source: {
     folder: StorageFolder.SourceCode,
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   const isValidKind = (k: unknown): k is UploadKind =>
-    k === "materials" || k === "source" || k === "screenshot";
+    k === "materials" || k === "materialsWord" || k === "source" || k === "screenshot";
 
   // Guard against a caller requesting MIME types that don't match the kind,
   // so presigned URLs can't be misused to write arbitrary content.
@@ -94,10 +99,26 @@ export async function POST(req: NextRequest) {
       "application/octet-stream",
       "application/x-zip",
     ];
+    const WORD_TYPES = [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+      "application/msword", // .doc
+    ];
 
     if (kind === "materials" && !PDF_TYPES.includes(contentType)) {
       return NextResponse.json(
         { error: "The materials file must be a PDF" },
+        { status: 400 }
+      );
+    }
+    // Word slot: accept .docx/.doc MIME types, plus the generic octet-stream
+    // fallback some browsers send (mirrors how the ZIP slot behaves).
+    if (
+      kind === "materialsWord" &&
+      !WORD_TYPES.includes(contentType) &&
+      contentType !== "application/octet-stream"
+    ) {
+      return NextResponse.json(
+        { error: "The Word materials file must be a .docx or .doc document" },
         { status: 400 }
       );
     }

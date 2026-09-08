@@ -4,7 +4,7 @@ import { useState } from "react";
 
 type Props = {
   projectId: string;
-  fileType: "materials" | "source";
+  fileType: "materials" | "word" | "source";
   label: string;
 };
 

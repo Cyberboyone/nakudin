@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   const status = body.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
 
   const materialsKey = typeof body.materialsKey === "string" ? body.materialsKey : "";
+  const materialsWordKey = typeof body.materialsWordKey === "string" ? body.materialsWordKey : "";
   const sourceCodeKey = typeof body.sourceCodeKey === "string" ? body.sourceCodeKey : "";
   const screenshotKey = typeof body.screenshotKey === "string" ? body.screenshotKey : "";
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
   // Track every key we might write so a failed attempt cleans up after itself
   // instead of leaving orphaned files in R2.
   const uploadedKeys = [materialsKey];
+  if (materialsWordKey) uploadedKeys.push(materialsWordKey);
 
   try {
     // Build the 10-page preview from the PDF the browser uploaded directly.
@@ -89,6 +91,7 @@ export async function POST(req: NextRequest) {
         status,
         departmentId: department.id,
         materialsFileKey: materialsKey,
+        materialsWordFileKey: materialsWordKey || null,
         previewFileKey: previewKey,
         sourceCodeFileKey: sourceCodeKey || null,
         screenshotFileKey: screenshotKey || null,

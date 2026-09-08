@@ -7,15 +7,17 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  const type = req.nextUrl.searchParams.get("type"); // "materials" | "source"
+  const type = req.nextUrl.searchParams.get("type"); // "materials" | "word" | "source"
 
   const project = await getProjectById(projectId);
   if (!project || project.status !== "PUBLISHED") {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const key =
-    type === "source" ? project.sourceCodeFileKey : project.materialsFileKey;
+  let key: string | null;
+  if (type === "source") key = project.sourceCodeFileKey;
+  else if (type === "word") key = project.materialsWordFileKey;
+  else key = project.materialsFileKey;
 
   if (!key) {
     return NextResponse.json(
