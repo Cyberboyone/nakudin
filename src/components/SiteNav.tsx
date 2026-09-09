@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Input } from "@/components/ui/Input";
+import SearchBox from "@/components/SearchBox";
 
 type DepartmentLink = { name: string; slug: string; projectCount: number };
 
@@ -128,12 +128,7 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
             <circle cx="11" cy="11" r="7" />
             <path d="m21 21-4.3-4.3" />
           </svg>
-          <input
-            name="q"
-            type="search"
-            placeholder="Search projects"
-            className="w-32 cursor-pointer bg-transparent text-sm placeholder:text-muted/60 focus:outline-none"
-          />
+          <SearchBox variant="nav" placeholder="Search projects" />
         </form>
         <Link
           href="/search"
@@ -180,12 +175,7 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
       {menuOpen && (
         <div className="md:hidden absolute left-0 right-0 top-full border-b border-border bg-ink px-6 py-5">
           <form action="/search" className="flex gap-2 mb-5">
-            <Input
-              name="q"
-              type="search"
-              placeholder="Search projects"
-              className="flex-1"
-            />
+            <SearchBox placeholder="Search projects" className="flex-1" />
             <button
               type="submit"
               className="cursor-pointer bg-lamp text-ink font-medium px-4 py-2.5 text-sm hover:brightness-110 transition"

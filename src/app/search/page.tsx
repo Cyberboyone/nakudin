@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { searchDepartments, searchPublishedProjects } from "@/lib/queries";
-import { Input } from "@/components/ui/Input";
+import SearchPageClient from "@/components/SearchPageClient";
 
 export const dynamic = "force-dynamic";
 
@@ -13,97 +12,22 @@ export default async function SearchPage({ searchParams }: Props) {
     ? await Promise.all([searchPublishedProjects(query), searchDepartments(query)])
     : [[], []];
 
+  const projects = results.map((p) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    abstract: p.abstract,
+    year: p.year,
+    level: p.level,
+    isSoftware: p.isSoftware,
+    departmentName: p.departmentName,
+  }));
+
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
-      <form action="/search" className="flex gap-2 max-w-md mb-10">
-        <Input
-              name="q"
-              type="search"
-              defaultValue={query}
-              placeholder="Search by title, topic, or department"
-              className="flex-1"
-            />
-        <button
-          type="submit"
-          className="cursor-pointer shrink-0 bg-lamp text-ink font-medium px-5 py-2.5 text-sm hover:brightness-110 transition active:translate-y-px"
-        >
-          Search
-        </button>
-      </form>
-
-      {query ? (
-        <>
-          <p className="text-sm text-muted mb-6">
-            {departments.length} department{departments.length === 1 ? "" : "s"} and {results.length} project
-            {results.length === 1 ? "" : "s"} for &ldquo;{query}&rdquo;
-          </p>
-
-          {departments.length > 0 && (
-            <section aria-label="Departments" className="mb-8">
-              <h2 className="font-display text-sm text-muted uppercase tracking-wide mb-3">
-                Departments
-              </h2>
-              <ul className="divide-y divide-border border-y border-border">
-                {departments.map((d) => (
-                  <li key={d.id}>
-                    <Link
-                      href={`/department/${d.slug}`}
-                      className="group -mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 transition-colors hover:bg-surface"
-                    >
-                      <span className="font-medium group-hover:text-lamp transition-colors">
-                        {d.name}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {d.projectCount} project{d.projectCount === 1 ? "" : "s"}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <h2 className="font-display text-sm text-muted uppercase tracking-wide mb-3">
-            Projects
-          </h2>
-          <ul className="divide-y divide-border border-y border-border">
-            {results.map((p) => (
-              <li key={p.id} className="py-4">
-                <Link href={`/project/${p.slug}`} className="group -mx-3 flex items-start justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-surface">
-                  <div>
-                    <p className="font-display text-lg group-hover:text-lamp transition-colors">
-                      {p.title}
-                    </p>
-                    <p className="text-sm text-muted mt-1 line-clamp-2">{p.abstract}</p>
-                    <p className="text-xs text-muted mt-1.5">
-                      {p.departmentName} — {p.year},{" "}
-                      {p.level === "UNDERGRADUATE" ? "undergraduate" : "postgraduate"}
-                    </p>
-                  </div>
-                  {p.isSoftware && (
-                    <span className="shrink-0 text-xs text-lamp border border-lamp/40 px-2 py-1 rounded">
-                      Code + materials
-                    </span>
-                  )}
-                </Link>
-              </li>
-            ))}
-            {results.length === 0 && (
-              <li className="py-10 text-sm text-muted text-center">
-                No projects matched that search.
-                <br />
-                Try a different word, or{" "}
-                <Link href="/#browse" className="text-lamp hover:underline">
-                  browse by department
-                </Link>
-                .
-              </li>
-            )}
-          </ul>
-        </>
-      ) : (
-        <p className="text-sm text-muted">Enter a search term above to get started.</p>
-      )}
-    </div>
+    <SearchPageClient
+      initialQuery={query}
+      initialDepartments={departments}
+      initialProjects={projects}
+    />
   );
 }

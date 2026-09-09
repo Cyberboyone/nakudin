@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getDepartmentsWithCounts, getRecentPublishedProjects } from "@/lib/queries";
-import { Input } from "@/components/ui/Input";
+import SearchBox from "@/components/SearchBox";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +29,8 @@ export default async function HomePage() {
             entry includes the complete write-up.
           </p>
           <form action="/search" className="mt-8 flex gap-2 max-w-md">
-            <Input
-              name="q"
-              type="search"
+            <SearchBox
+              variant="default"
               placeholder="Search by title or topic"
               className="flex-1"
             />
