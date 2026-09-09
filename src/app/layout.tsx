@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CookieConsent from "@/components/CookieConsent";
+import SideAds from "@/components/SideAds";
 import SiteNav from "@/components/SiteNav";
 import { getDepartmentsWithCounts } from "@/lib/queries";
 import "./globals.css";
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </footer>
         <CookieConsent />
+        <SideAds />
       </body>
     </html>
   );
