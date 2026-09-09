@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useSyncExternalStore } from "react";
 import { getServerSnapshot, hasConsented, subscribe } from "@/lib/consent";
+import { loadAdsScript, pushAd } from "@/lib/adsense";
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 const ADSENSE_SIDE_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SIDE_SLOT;
@@ -10,30 +11,6 @@ const ADSENSE_SIDE_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SIDE_SLOT;
 // configured (Vercel env vars) and the visitor has accepted the cookie
 // consent. Until then, this reserves the space with a labeled placeholder.
 const ADS_READY = Boolean(ADSENSE_CLIENT && ADSENSE_SIDE_SLOT);
-
-type AdsGlobal = { adsbygoogle?: unknown[] };
-
-function pushAd() {
-  const g = window as unknown as AdsGlobal;
-  try {
-    (g.adsbygoogle = g.adsbygoogle || []).push({});
-  } catch {
-    // Ad unit not ready yet — AdSense recovers on its own.
-  }
-}
-
-function loadAdsScript() {
-  if (document.querySelector("script[data-adsbygoogle]")) return;
-  const s = document.createElement("script");
-  s.async = true;
-  s.crossOrigin = "anonymous";
-  s.dataset.adsbygoogle = "";
-  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
-  s.onload = () => {
-    document.querySelectorAll("ins.adsbygoogle").forEach(() => pushAd());
-  };
-  document.head.appendChild(s);
-}
 
 function AdPanel() {
   if (ADS_READY) {
@@ -62,8 +39,8 @@ export default function SideAds() {
   const showAds = ADS_READY && consented;
 
   useEffect(() => {
-    if (!showAds) return;
-    loadAdsScript();
+    if (!showAds || !ADSENSE_CLIENT) return;
+    loadAdsScript(ADSENSE_CLIENT);
     const t = setTimeout(pushAd, 300);
     return () => clearTimeout(t);
   }, [showAds]);
