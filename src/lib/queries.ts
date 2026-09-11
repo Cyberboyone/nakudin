@@ -1,6 +1,7 @@
 import { eq, ne, desc, and, or, ilike, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { departments, projects, tags, projectTags, messages } from "@/db/schema";
+import type { ProjectLevel } from "@/lib/levels";
 
 export async function getDepartmentsWithCounts() {
   const rows = await db
@@ -41,6 +42,26 @@ export async function getRecentPublishedProjects(limit = 6) {
   return rows;
 }
 
+export async function getRecentPublishedProjectsByLevel(level: ProjectLevel, limit = 6) {
+  const rows = await db
+    .select({
+      id: projects.id,
+      title: projects.title,
+      slug: projects.slug,
+      year: projects.year,
+      level: projects.level,
+      isSoftware: projects.isSoftware,
+      departmentName: departments.name,
+    })
+    .from(projects)
+    .innerJoin(departments, eq(projects.departmentId, departments.id))
+    .where(and(eq(projects.status, "PUBLISHED"), eq(projects.level, level)))
+    .orderBy(desc(projects.createdAt))
+    .limit(limit);
+
+  return rows;
+}
+
 export async function getDepartmentBySlug(slug: string) {
   const rows = await db
     .select()
@@ -52,7 +73,7 @@ export async function getDepartmentBySlug(slug: string) {
 
 export async function getPublishedProjectsByDepartment(
   departmentId: string,
-  level?: "UNDERGRADUATE" | "POSTGRADUATE"
+  level?: ProjectLevel
 ) {
   const conditions = [
     eq(projects.departmentId, departmentId),
@@ -267,7 +288,7 @@ export async function updateProjectFields(
     title: string;
     abstract: string;
     year: number;
-    level: "UNDERGRADUATE" | "POSTGRADUATE";
+    level: ProjectLevel;
     isSoftware: boolean;
     status: "DRAFT" | "PUBLISHED";
     departmentId: string;

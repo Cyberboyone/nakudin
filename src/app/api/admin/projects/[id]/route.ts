@@ -14,6 +14,7 @@ import {
   StorageFolder,
 } from "@/lib/storage";
 import { extractPreviewPages } from "@/lib/pdf-preview";
+import { isProjectLevel } from "@/lib/levels";
 
 function slugify(input: string): string {
   return input
@@ -41,7 +42,7 @@ export async function PATCH(
   const title = typeof body.title === "string" ? body.title : "";
   const departmentName = typeof body.departmentName === "string" ? body.departmentName : "";
   const year = Number(body.year);
-  const level = body.level as "UNDERGRADUATE" | "POSTGRADUATE";
+  const level = typeof body.level === "string" && isProjectLevel(body.level) ? body.level : "";
   const abstract = typeof body.abstract === "string" ? body.abstract : "";
   const tagsRaw = String(body?.tags ?? "");
   const isSoftware = body.isSoftware === true;

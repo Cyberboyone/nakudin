@@ -1,13 +1,25 @@
 import Link from "next/link";
-import { getDepartmentsWithCounts, getRecentPublishedProjects } from "@/lib/queries";
+import {
+  getDepartmentsWithCounts,
+  getRecentPublishedProjects,
+  getRecentPublishedProjectsByLevel,
+} from "@/lib/queries";
 import SearchBox from "@/components/SearchBox";
+import { isProjectLevel, projectLevelLabel } from "@/lib/levels";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+type Props = { searchParams: Promise<{ level?: string }> };
+
+export default async function HomePage({ searchParams }: Props) {
+  const { level } = await searchParams;
+  const filteredLevel = isProjectLevel(level) ? level : undefined;
+
   const [departmentsRaw, recentProjects] = await Promise.all([
     getDepartmentsWithCounts(),
-    getRecentPublishedProjects(6),
+    filteredLevel
+      ? getRecentPublishedProjectsByLevel(filteredLevel)
+      : getRecentPublishedProjects(6),
   ]);
 
   // Departments with more projects get more visual weight — a real catalog's
@@ -102,7 +114,9 @@ export default async function HomePage() {
 
       {/* Recently added — a list, deliberately not more cards, for contrast */}
       <section className="py-14">
-        <h2 className="font-display text-xl mb-6">Recently added</h2>
+        <h2 className="font-display text-xl mb-6">
+          {filteredLevel ? `Recent ${projectLevelLabel(filteredLevel)} projects` : "Recently added"}
+        </h2>
         <ul className="divide-y divide-border border-y border-border">
           {recentProjects.map((p) => (
             <li key={p.id} className="py-4">
@@ -113,7 +127,7 @@ export default async function HomePage() {
                   </p>
                   <p className="text-sm text-muted mt-1">
                     {p.departmentName} — {p.year},{" "}
-                    {p.level === "UNDERGRADUATE" ? "undergraduate" : "postgraduate"}
+                    {projectLevelLabel(p.level)}
                   </p>
                 </div>
                 {p.isSoftware && (

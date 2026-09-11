@@ -10,7 +10,12 @@ import {
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
-export const levelEnum = pgEnum("level", ["UNDERGRADUATE", "POSTGRADUATE"]);
+export const levelEnum = pgEnum("level", [
+  "UNDERGRADUATE",
+  "POSTGRADUATE",
+  "DIPLOMA",
+  "NCE",
+]);
 export const projectStatusEnum = pgEnum("project_status", ["DRAFT", "PUBLISHED"]);
 
 export const departments = pgTable("departments", {

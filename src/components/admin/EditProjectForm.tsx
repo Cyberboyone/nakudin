@@ -8,7 +8,7 @@ type Project = {
   title: string;
   departmentName: string;
   year: number;
-  level: "UNDERGRADUATE" | "POSTGRADUATE";
+  level: "UNDERGRADUATE" | "POSTGRADUATE" | "DIPLOMA" | "NCE";
   abstract: string;
   tags: string;
   isSoftware: boolean;
@@ -167,6 +167,8 @@ export default function EditProjectForm({ project }: { project: Project }) {
           <select name="level" required defaultValue={project.level} className="input">
             <option value="UNDERGRADUATE">Undergraduate</option>
             <option value="POSTGRADUATE">Postgraduate</option>
+            <option value="DIPLOMA">Diploma</option>
+            <option value="NCE">NCE</option>
           </select>
         </Field>
       </div>

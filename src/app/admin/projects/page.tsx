@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllProjectsForAdmin } from "@/lib/queries";
 import DeleteProjectButton from "@/components/admin/DeleteProjectButton";
+import { projectLevelLabel } from "@/lib/levels";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,7 @@ export default async function AdminProjectsPage() {
                 </span>
               </div>
               <p className="text-sm text-muted mt-1">
-                {p.departmentName} — {p.year},{" "}
-                {p.level === "UNDERGRADUATE" ? "undergraduate" : "postgraduate"}
+                {p.departmentName} — {p.year}, {projectLevelLabel(p.level)}
                 {p.isSoftware ? ", code + materials" : ""}
               </p>
               <p className="text-xs text-muted mt-1">

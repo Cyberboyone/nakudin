@@ -5,6 +5,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { getProjectBySlug, getRelatedProjects, incrementViewCount } from "@/lib/queries";
 import { safePublicUrl } from "@/lib/storage";
 import DownloadButton from "@/components/DownloadButton";
+import { projectLevelLabel } from "@/lib/levels";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,7 @@ export default async function ProjectPage({ params }: Props) {
 
       <p className="text-sm text-muted mt-3">
         {project.departmentName} — {project.year},{" "}
-        {project.level === "UNDERGRADUATE" ? "undergraduate" : "postgraduate"}
+        {projectLevelLabel(project.level)}
       </p>
 
       {project.tags.length > 0 && (

@@ -11,6 +11,8 @@ import {
 } from "@/lib/storage";
 import { extractPreviewPages } from "@/lib/pdf-preview";
 
+import { isProjectLevel } from "@/lib/levels";
+
 // Auth for this route is enforced in src/proxy.ts (matches /api/admin/:path*),
 // not here — a request only reaches this handler with a valid admin session.
 //
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
   const title = typeof body.title === "string" ? body.title : "";
   const departmentName = typeof body.departmentName === "string" ? body.departmentName : "";
   const year = Number(body.year);
-  const level = body.level as "UNDERGRADUATE" | "POSTGRADUATE";
+  const level = typeof body.level === "string" && isProjectLevel(body.level) ? body.level : "";
   const abstract = typeof body.abstract === "string" ? body.abstract : "";
   const slug = typeof body.slug === "string" ? body.slug : "";
   const tagsRaw = String(body?.tags ?? "");

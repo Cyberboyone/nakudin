@@ -16,9 +16,8 @@ export default function AboutPage() {
           you can see exactly how it was built, not just read about it.
         </p>
         <p>
-          Projects are organized by department and academic level, starting
-          with undergraduate work, with postgraduate projects being added over
-          time.
+          Projects are organized by department and academic level —
+          undergraduate, postgraduate, diploma, and NCE work.
         </p>
         <p>
           Nakudin is free to use and supported by ads, so it can stay free.

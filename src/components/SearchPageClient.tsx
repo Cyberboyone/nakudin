@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { projectLevelLabel } from "@/lib/levels";
 
 type DepartmentResult = {
   id: string;
@@ -163,7 +164,7 @@ export default function SearchPageClient({
                     <p className="text-sm text-muted mt-1 line-clamp-2">{p.abstract}</p>
                     <p className="text-xs text-muted mt-1.5">
                       {p.departmentName} — {p.year},{" "}
-                      {p.level === "UNDERGRADUATE" ? "undergraduate" : "postgraduate"}
+                      {projectLevelLabel(p.level)}
                     </p>
                   </div>
                   {p.isSoftware && (

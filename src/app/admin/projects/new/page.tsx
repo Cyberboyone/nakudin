@@ -172,6 +172,8 @@ export default function NewProjectPage() {
             <select name="level" required className="input">
               <option value="UNDERGRADUATE">Undergraduate</option>
               <option value="POSTGRADUATE">Postgraduate</option>
+              <option value="DIPLOMA">Diploma</option>
+              <option value="NCE">NCE</option>
             </select>
           </Field>
         </div>

@@ -110,6 +110,12 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
         <Link href="/?level=POSTGRADUATE" className={activeClass(false)}>
           Postgraduate
         </Link>
+        <Link href="/?level=DIPLOMA" className={activeClass(false)}>
+          Diploma
+        </Link>
+        <Link href="/?level=NCE" className={activeClass(false)}>
+          NCE
+        </Link>
         <Link href="/about" className={activeClass(isActive("/about"))}>
           About
         </Link>
@@ -192,6 +198,12 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
             </Link>
             <Link href="/?level=POSTGRADUATE" className="text-base hover:text-text transition-colors">
               Postgraduate
+            </Link>
+            <Link href="/?level=DIPLOMA" className="text-base hover:text-text transition-colors">
+              Diploma
+            </Link>
+            <Link href="/?level=NCE" className="text-base hover:text-text transition-colors">
+              NCE
             </Link>
             <Link href="/about" className={`text-base ${activeClass(isActive("/about"))}`}>
               About

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { getDepartmentBySlug, getPublishedProjectsByDepartment } from "@/lib/queries";
+import { PROJECT_LEVELS, PROJECT_LEVEL_LABELS, projectLevelLabel, isProjectLevel } from "@/lib/levels";
 
 export const dynamic = "force-dynamic";
 
@@ -46,22 +47,16 @@ export default async function DepartmentPage({ params, searchParams }: Props) {
   const department = await getDepartmentBySlug(slug);
   if (!department) notFound();
 
-  const validLevel =
-    level === "UNDERGRADUATE" || level === "POSTGRADUATE" ? level : undefined;
+  const validLevel = isProjectLevel(level) ? level : undefined;
   const projects = await getPublishedProjectsByDepartment(department.id, validLevel);
 
   const filters: { label: string; href: string; active: boolean }[] = [
     { label: "All levels", href: `/department/${slug}`, active: !level },
-    {
-      label: "Undergraduate",
-      href: `/department/${slug}?level=UNDERGRADUATE`,
-      active: level === "UNDERGRADUATE",
-    },
-    {
-      label: "Postgraduate",
-      href: `/department/${slug}?level=POSTGRADUATE`,
-      active: level === "POSTGRADUATE",
-    },
+    ...PROJECT_LEVELS.map((l) => ({
+      label: PROJECT_LEVEL_LABELS[l],
+      href: `/department/${slug}?level=${l}`,
+      active: level === l,
+    })),
   ];
 
   return (
@@ -96,7 +91,7 @@ export default async function DepartmentPage({ params, searchParams }: Props) {
                 </p>
                 <p className="text-sm text-muted mt-1 line-clamp-2">{p.abstract}</p>
                 <p className="text-xs text-muted mt-1.5">
-                  {p.year} — {p.level === "UNDERGRADUATE" ? "undergraduate" : "postgraduate"}
+                  {p.year} — {projectLevelLabel(p.level)}
                 </p>
               </div>
               {p.isSoftware && (
