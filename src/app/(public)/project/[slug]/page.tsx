@@ -5,6 +5,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { getProjectBySlug, getRelatedProjects, incrementViewCount } from "@/lib/queries";
 import { safePublicUrl } from "@/lib/storage";
 import DownloadButton from "@/components/DownloadButton";
+import InFeedAd from "@/components/InFeedAd";
 import { projectLevelLabel } from "@/lib/levels";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ export default async function ProjectPage({ params }: Props) {
 
   incrementViewCount(project.id).catch(() => {});
 
-  const relatedProjects = await getRelatedProjects(project.departmentId, project.id, 4);
+  const relatedProjects = await getRelatedProjects(project.departmentId, project.id, 5);
 
   const screenshotUrl = project.screenshotFileKey ? safePublicUrl(project.screenshotFileKey) : null;
   const previewUrl = project.previewFileKey ? safePublicUrl(project.previewFileKey) : null;
@@ -173,6 +174,25 @@ export default async function ProjectPage({ params }: Props) {
               </li>
             ))}
           </ul>
+
+          {/* Ad under the related list */}
+          <div className="mt-8">
+            <InFeedAd />
+          </div>
+
+          {/* Services CTA */}
+          <Link
+            href="/services"
+            className="mt-8 block border border-lamp/40 bg-lamp/5 px-5 py-4 hover:bg-lamp/10 transition group"
+          >
+            <p className="font-display text-base group-hover:text-lamp transition-colors">
+              Too time-strapped to build it yourself?
+            </p>
+            <p className="text-sm text-muted mt-1">
+              Our team writes final-year projects and builds software on request —
+              source, materials and support included. Get a quote.
+            </p>
+          </Link>
         </div>
       )}
     </div>

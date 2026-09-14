@@ -58,6 +58,27 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Services CTA under the hero */}
+      <section className="border-b border-border">
+        <Link
+          href="/services"
+          className="group block border-b border-lamp/40 bg-lamp/5 px-5 py-4 hover:bg-lamp/10 transition flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between"
+        >
+          <div>
+            <p className="font-display text-base group-hover:text-lamp transition-colors">
+              Don&apos;t want to tackle it alone?
+            </p>
+            <p className="text-sm text-muted mt-0.5">
+              We write final-year projects and build software on request — materials,
+              source code, screenshots and support included.
+            </p>
+          </div>
+          <span className="shrink-0 text-sm text-lamp border border-lamp/50 px-4 py-2 group-hover:bg-lamp group-hover:text-ink transition">
+            Explore services
+          </span>
+        </Link>
+      </section>
+
       {/* Department sections */}
       <div className="divide-y divide-border">
         {deptSections.map((dept, di) => {
