@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   getDepartmentsWithCounts,
   getRecentPublishedProjects,
@@ -6,6 +7,7 @@ import {
 } from "@/lib/queries";
 import SearchBox from "@/components/SearchBox";
 import { isProjectLevel, projectLevelLabel } from "@/lib/levels";
+import InFeedAd from "@/components/InFeedAd";
 
 export const dynamic = "force-dynamic";
 
@@ -118,26 +120,30 @@ export default async function HomePage({ searchParams }: Props) {
           {filteredLevel ? `Recent ${projectLevelLabel(filteredLevel)} projects` : "Recently added"}
         </h2>
         <ul className="divide-y divide-border border-y border-border">
-          {recentProjects.map((p) => (
-            <li key={p.id} className="py-4">
-              <Link href={`/project/${p.slug}`} className="group -mx-3 flex items-start justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-surface">
-                <div>
-                  <p className="font-display text-lg group-hover:text-lamp transition-colors">
-                    {p.title}
-                  </p>
-                  <p className="text-sm text-muted mt-1">
-                    {p.departmentName} — {p.year},{" "}
-                    {projectLevelLabel(p.level)}
-                  </p>
-                </div>
-                {p.isSoftware && (
-                  <span className="shrink-0 text-xs text-lamp border border-lamp/40 px-2 py-1 rounded">
-                    Code + materials
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
+          {recentProjects.flatMap((p, i) => {
+            const items: ReactNode[] = [
+              <li key={p.id} className="py-4">
+                <Link href={`/project/${p.slug}`} className="group -mx-3 flex items-start justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-surface">
+                  <div>
+                    <p className="font-display text-lg group-hover:text-lamp transition-colors">
+                      {p.title}
+                    </p>
+                    <p className="text-sm text-muted mt-1">
+                      {p.departmentName} — {p.year},{" "}
+                      {projectLevelLabel(p.level)}
+                    </p>
+                  </div>
+                  {p.isSoftware && (
+                    <span className="shrink-0 text-xs text-lamp border border-lamp/40 px-2 py-1 rounded">
+                      Code + materials
+                    </span>
+                  )}
+                </Link>
+              </li>,
+            ];
+            if ((i + 1) % 5 === 0) items.push(<InFeedAd key={`ad-${i}`} />);
+            return items;
+          })}
           {recentProjects.length === 0 && (
             <li className="py-6 text-sm text-muted">No published projects yet.</li>
           )}
