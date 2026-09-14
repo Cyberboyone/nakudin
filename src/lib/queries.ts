@@ -346,6 +346,47 @@ export async function deleteMessageById(id: string) {
   await db.delete(messages).where(eq(messages.id, id));
 }
 
+export async function getRecentProjectsByDepartment(departmentLimit = 6, projectsPerDept = 5) {
+  const topDepts = await db
+    .select({
+      id: departments.id,
+      name: departments.name,
+      slug: departments.slug,
+      projectCount: sql<number>`count(${projects.id})`.mapWith(Number),
+    })
+    .from(departments)
+    .leftJoin(
+      projects,
+      and(eq(projects.departmentId, departments.id), eq(projects.status, "PUBLISHED"))
+    )
+    .groupBy(departments.id)
+    .having(sql`count(${projects.id}) > 0`)
+    .orderBy(sql`count(${projects.id}) DESC`)
+    .limit(departmentLimit);
+
+  const results = await Promise.all(
+    topDepts.map(async (dept) => {
+      const recentProjects = await db
+        .select({
+          id: projects.id,
+          title: projects.title,
+          slug: projects.slug,
+          year: projects.year,
+          level: projects.level,
+          isSoftware: projects.isSoftware,
+        })
+        .from(projects)
+        .where(and(eq(projects.departmentId, dept.id), eq(projects.status, "PUBLISHED")))
+        .orderBy(desc(projects.createdAt))
+        .limit(projectsPerDept);
+
+      return { ...dept, recentProjects };
+    })
+  );
+
+  return results;
+}
+
 // --- Sitemap ---
 
 export async function getAllPublishedProjectSlugsForSitemap() {
