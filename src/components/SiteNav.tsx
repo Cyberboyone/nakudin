@@ -116,6 +116,9 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
         <Link href="/?level=NCE" className={activeClass(false)}>
           NCE
         </Link>
+        <Link href="/services" className={activeClass(isActive("/services"))}>
+          Services
+        </Link>
         <Link href="/about" className={activeClass(isActive("/about"))}>
           About
         </Link>
@@ -204,6 +207,9 @@ export default function SiteNav({ departments }: { departments: DepartmentLink[]
             </Link>
             <Link href="/?level=NCE" className="text-base hover:text-text transition-colors">
               NCE
+            </Link>
+            <Link href="/services" className={`text-base ${activeClass(isActive("/services"))}`}>
+              Services
             </Link>
             <Link href="/about" className={`text-base ${activeClass(isActive("/about"))}`}>
               About

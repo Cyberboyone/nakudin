@@ -320,10 +320,16 @@ export async function deleteProjectById(id: string) {
 // --- Admin: messages (contact / report an issue) ---
 
 export async function createMessage(data: {
+  kind?: string;
   name?: string;
   email?: string;
+  phone?: string;
   body: string;
   relatedProjectSlug?: string;
+  serviceType?: string | null;
+  topic?: string | null;
+  budget?: string | null;
+  deadline?: string | null;
 }) {
   await db.insert(messages).values(data);
 }

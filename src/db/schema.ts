@@ -79,14 +79,22 @@ export const admins = pgTable("admins", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Contact / report-an-issue submissions — all routed to the single admin
+// Contact / report-an-issue submissions — all routed to the single admin.
+// kind distinguishes general messages from paid service requests.
 export const messages = pgTable("messages", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
+  kind: text("kind").notNull().default("contact"),
   name: text("name"),
   email: text("email"),
+  phone: text("phone"),
   body: text("body").notNull(),
   // Optional: which project this is about, if reported from a project page
   relatedProjectSlug: text("related_project_slug"),
+  // Service-request fields (kind = "service"); null for general messages
+  serviceType: text("service_type"),
+  topic: text("topic"),
+  budget: text("budget"),
+  deadline: text("deadline"),
   isRead: boolean("is_read").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
