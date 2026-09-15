@@ -317,7 +317,43 @@ export async function deleteProjectById(id: string) {
   await db.delete(projects).where(eq(projects.id, id));
 }
 
-// --- Admin: messages (contact / report an issue) ---
+// --- Admin dashboard ---
+
+export async function getAdminStats() {
+  const [projectTotals, messageTotals] = await Promise.all([
+    db
+      .select({
+        published: sql<number>`count(*) filter (where ${projects.status} = 'PUBLISHED')`.mapWith(Number),
+        drafts: sql<number>`count(*) filter (where ${projects.status} = 'DRAFT')`.mapWith(Number),
+        totalViews: sql<number>`coalesce(sum(${projects.viewCount}), 0)`.mapWith(Number),
+        totalDownloads: sql<number>`coalesce(sum(${projects.downloadCount}), 0)`.mapWith(Number),
+      })
+      .from(projects),
+    db
+      .select({
+        unread: sql<number>`count(*) filter (where not ${messages.isRead})`.mapWith(Number),
+        total: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(messages),
+  ]);
+
+  return {
+    projects: projectTotals[0],
+    messages: messageTotals[0],
+  };
+}
+
+export async function getRecentMessages(limit = 6) {
+  return db.select().from(messages).orderBy(desc(messages.createdAt)).limit(limit);
+}
+
+export async function getRecentMessagesForAdmin(limit = 6) {
+  return db
+    .select()
+    .from(messages)
+    .orderBy(desc(messages.createdAt))
+    .limit(limit);
+}
 
 export async function createMessage(data: {
   kind?: string;

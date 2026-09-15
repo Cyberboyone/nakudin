@@ -25,6 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="border-b border-border">
         <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
           <nav className="flex items-center gap-6">
+            {navItem("/admin", "Dashboard")}
             {navItem("/admin/projects", "All projects")}
             {navItem("/admin/projects/new", "Add project")}
             {navItem("/admin/messages", "Messages")}
