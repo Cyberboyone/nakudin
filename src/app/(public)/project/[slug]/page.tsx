@@ -60,7 +60,6 @@ export default async function ProjectPage({ params }: Props) {
   const relatedProjects = await getRelatedProjects(project.departmentId, project.id, 5);
 
   const screenshotUrl = project.screenshotFileKey ? safePublicUrl(project.screenshotFileKey) : null;
-  const previewUrl = project.previewFileKey ? safePublicUrl(project.previewFileKey) : null;
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -118,14 +117,17 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       )}
 
-      {previewUrl && (
+      {project.previewFileKey && (
         <div className="mb-10">
           <h2 className="font-display text-lg mb-3">Preview — first 10 pages</h2>
           <div className="border border-border" style={{ height: "70vh" }}>
+            {/* Same-origin proxy — Android Chrome's embedded PDF viewer only
+                reliably renders same-origin PDFs inside an iframe. */}
             <iframe
-              src={previewUrl}
+              src={`/api/preview/${project.slug}`}
               className="w-full h-full bg-surface"
               title={`${project.title} preview`}
+              allowFullScreen
             />
           </div>
         </div>
