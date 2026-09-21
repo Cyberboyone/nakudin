@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { getAdminStats, getRecentMessagesForAdmin } from "@/lib/queries";
+import {
+  getAdminStats,
+  getRecentMessagesForAdmin,
+  getTopProjects,
+  getDepartmentAnalytics,
+  getUniqueViews24h,
+} from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +28,14 @@ function StatCard({
 }
 
 export default async function AdminDashboardPage() {
-  const stats = await getAdminStats();
-  const recentMessages = await getRecentMessagesForAdmin(6);
+  const [stats, recentMessages, topProjects, deptAnalytics, unique24h] =
+    await Promise.all([
+      getAdminStats(),
+      getRecentMessagesForAdmin(6),
+      getTopProjects(10),
+      getDepartmentAnalytics(),
+      getUniqueViews24h(),
+    ]);
 
   const cards = [
     {
@@ -31,8 +43,15 @@ export default async function AdminDashboardPage() {
       value: stats.projects.published,
       sub: `${stats.projects.drafts} drafts`,
     },
-    { label: "Total views", value: stats.projects.totalViews.toLocaleString() },
-    { label: "Downloads", value: stats.projects.totalDownloads.toLocaleString() },
+    {
+      label: "Total views",
+      value: stats.projects.totalViews.toLocaleString(),
+      sub: `${unique24h} unique (24h)`,
+    },
+    {
+      label: "Downloads",
+      value: stats.projects.totalDownloads.toLocaleString(),
+    },
     {
       label: "Unread messages",
       value: stats.messages.unread,
@@ -56,6 +75,60 @@ export default async function AdminDashboardPage() {
         {cards.map((c) => (
           <StatCard key={c.label} label={c.label} value={c.value} sub={c.sub} />
         ))}
+      </section>
+
+      {/* Top projects by views */}
+      <section className="mb-12">
+        <h2 className="font-display text-lg mb-4">Top projects by views</h2>
+        {topProjects.length === 0 ? (
+          <p className="py-6 text-sm text-muted">No published projects yet.</p>
+        ) : (
+          <div className="border-y border-border divide-y divide-border">
+            {topProjects.map((p, i) => (
+              <div key={p.id} className="py-3 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm">
+                    <span className="text-muted mr-2">{i + 1}.</span>
+                    <Link
+                      href={`/project/${p.slug}`}
+                      className="hover:text-lamp transition-colors truncate"
+                    >
+                      {p.title}
+                    </Link>
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">{p.departmentName}</p>
+                </div>
+                <div className="text-right text-xs text-muted whitespace-nowrap">
+                  {p.viewCount.toLocaleString()} views · {p.downloadCount.toLocaleString()} downloads
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Department breakdown */}
+      <section className="mb-12">
+        <h2 className="font-display text-lg mb-4">By department</h2>
+        {deptAnalytics.length === 0 ? (
+          <p className="py-6 text-sm text-muted">No departments yet.</p>
+        ) : (
+          <div className="border-y border-border divide-y divide-border">
+            {deptAnalytics.map((d) => (
+              <div key={d.id} className="py-3 flex items-center justify-between gap-4">
+                <Link
+                  href={`/admin/projects?department=${d.slug}`}
+                  className="text-sm hover:text-lamp transition-colors truncate"
+                >
+                  {d.name}
+                </Link>
+                <div className="text-right text-xs text-muted whitespace-nowrap">
+                  {d.projectCount} projects · {d.totalViews.toLocaleString()} views · {d.totalDownloads.toLocaleString()} downloads
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section>

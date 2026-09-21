@@ -6,6 +6,7 @@ import {
   timestamp,
   pgEnum,
   primaryKey,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -99,6 +100,20 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Tracks per-IP views for deduplication (one count per IP per hour per project)
+export const viewLog = pgTable(
+  "view_log",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    ipHash: text("ip_hash").notNull(),
+    viewedAt: timestamp("viewed_at").notNull().defaultNow(),
+  },
+  (t) => [index("view_log_proj_ip_idx").on(t.projectId, t.ipHash, t.viewedAt)]
+);
+
 // --- Relations (lets us do db.query.projects.findMany({ with: { department: true, tags: true } })) ---
 
 export const departmentsRelations = relations(departments, ({ many }) => ({
@@ -125,5 +140,12 @@ export const projectTagsRelations = relations(projectTags, ({ one }) => ({
   tag: one(tags, {
     fields: [projectTags.tagId],
     references: [tags.id],
+  }),
+}));
+
+export const viewLogRelations = relations(viewLog, ({ one }) => ({
+  project: one(projects, {
+    fields: [viewLog.projectId],
+    references: [projects.id],
   }),
 }));

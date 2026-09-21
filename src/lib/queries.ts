@@ -1,6 +1,7 @@
 import { eq, ne, desc, and, or, ilike, sql } from "drizzle-orm";
+import { createHash } from "crypto";
 import { db } from "@/lib/db";
-import { departments, projects, tags, projectTags, messages } from "@/db/schema";
+import { departments, projects, tags, projectTags, messages, viewLog } from "@/db/schema";
 import type { ProjectLevel } from "@/lib/levels";
 
 export async function getDepartmentsWithCounts() {
@@ -136,7 +137,27 @@ export async function getRelatedProjects(departmentId: string, excludeId: string
     .limit(limit);
 }
 
-export async function incrementViewCount(id: string) {
+export async function incrementViewCount(id: string, ip: string) {
+  const ipHash = createHash("sha256").update(ip).digest("hex");
+
+  // Check if this IP viewed this project in the last hour
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const recent = await db
+    .select({ id: viewLog.id })
+    .from(viewLog)
+    .where(
+      and(
+        eq(viewLog.projectId, id),
+        eq(viewLog.ipHash, ipHash),
+        sql`${viewLog.viewedAt} > ${oneHourAgo}`
+      )
+    )
+    .limit(1);
+
+  if (recent.length > 0) return; // Already counted — skip
+
+  // New unique view: log it and increment counter
+  await db.insert(viewLog).values({ projectId: id, ipHash });
   await db
     .update(projects)
     .set({ viewCount: sql`${projects.viewCount} + 1` })
@@ -341,6 +362,53 @@ export async function getAdminStats() {
     projects: projectTotals[0],
     messages: messageTotals[0],
   };
+}
+
+export async function getTopProjects(limit = 10) {
+  return db
+    .select({
+      id: projects.id,
+      title: projects.title,
+      slug: projects.slug,
+      viewCount: projects.viewCount,
+      downloadCount: projects.downloadCount,
+      departmentName: departments.name,
+    })
+    .from(projects)
+    .leftJoin(departments, eq(projects.departmentId, departments.id))
+    .where(eq(projects.status, "PUBLISHED"))
+    .orderBy(desc(projects.viewCount))
+    .limit(limit);
+}
+
+export async function getUniqueViews24h() {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [row] = await db
+    .select({
+      count: sql<number>`count(distinct ${viewLog.ipHash})`.mapWith(Number),
+    })
+    .from(viewLog)
+    .where(sql`${viewLog.viewedAt} > ${since}`);
+  return row?.count ?? 0;
+}
+
+export async function getDepartmentAnalytics() {
+  return db
+    .select({
+      id: departments.id,
+      name: departments.name,
+      slug: departments.slug,
+      projectCount: sql<number>`count(${projects.id})`.mapWith(Number),
+      totalViews: sql<number>`coalesce(sum(${projects.viewCount}), 0)`.mapWith(Number),
+      totalDownloads: sql<number>`coalesce(sum(${projects.downloadCount}), 0)`.mapWith(Number),
+    })
+    .from(departments)
+    .leftJoin(
+      projects,
+      eq(projects.departmentId, departments.id)
+    )
+    .groupBy(departments.id, departments.name, departments.slug)
+    .orderBy(desc(sql`coalesce(sum(${projects.viewCount}), 0)`));
 }
 
 export async function getRecentMessages(limit = 6) {

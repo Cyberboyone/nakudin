@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { getProjectBySlug, getRelatedProjects, incrementViewCount } from "@/lib/queries";
@@ -55,7 +56,9 @@ export default async function ProjectPage({ params }: Props) {
   const project = await getProjectBySlug(slug);
   if (!project) notFound();
 
-  incrementViewCount(project.id).catch(() => {});
+  const hdrs = await headers();
+  const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() || hdrs.get("x-real-ip") || "0.0.0.0";
+  incrementViewCount(project.id, ip).catch(() => {});
 
   const relatedProjects = await getRelatedProjects(project.departmentId, project.id, 5);
 
