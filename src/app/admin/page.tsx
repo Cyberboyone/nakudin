@@ -30,11 +30,14 @@ function StatCard({
 export default async function AdminDashboardPage() {
   const [stats, recentMessages, topProjects, deptAnalytics, unique24h] =
     await Promise.all([
-      getAdminStats(),
-      getRecentMessagesForAdmin(6),
-      getTopProjects(10),
-      getDepartmentAnalytics(),
-      getUniqueViews24h(),
+      getAdminStats().catch(() => ({
+        projects: { published: 0, drafts: 0, totalViews: 0, totalDownloads: 0 },
+        messages: { unread: 0, total: 0 },
+      })),
+      getRecentMessagesForAdmin(6).catch(() => []),
+      getTopProjects(10).catch(() => []),
+      getDepartmentAnalytics().catch(() => []),
+      getUniqueViews24h().catch(() => 0),
     ]);
 
   const cards = [

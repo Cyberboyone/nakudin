@@ -393,7 +393,7 @@ export async function getUniqueViews24h() {
 }
 
 export async function getDepartmentAnalytics() {
-  return db
+  const rows = await db
     .select({
       id: departments.id,
       name: departments.name,
@@ -407,8 +407,8 @@ export async function getDepartmentAnalytics() {
       projects,
       eq(projects.departmentId, departments.id)
     )
-    .groupBy(departments.id, departments.name, departments.slug)
-    .orderBy(desc(sql`coalesce(sum(${projects.viewCount}), 0)`));
+    .groupBy(departments.id, departments.name, departments.slug);
+  return rows.sort((a, b) => b.totalViews - a.totalViews);
 }
 
 export async function getRecentMessages(limit = 6) {
