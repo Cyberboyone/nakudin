@@ -7,6 +7,7 @@ import { getDepartmentsWithCounts } from "@/lib/queries";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nakudin.com"),
   title: "Free Final Year Project Source Code & Materials | Nakudin",
   description:
     "Free final year project source code and materials for Nigerian university students, by department and level. Nakudin.",
@@ -26,6 +27,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9529770421530115"
+          crossOrigin="anonymous"
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
