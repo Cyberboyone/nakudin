@@ -3,14 +3,35 @@ import type { ReactNode } from "react";
 import {
   getRecentProjectsByDepartment,
   getDepartmentsWithCounts,
+  getProjectsByLevel,
+  countProjectsByLevel,
 } from "@/lib/queries";
 import SearchBox from "@/components/SearchBox";
-import { projectLevelLabel } from "@/lib/levels";
+import {
+  PROJECT_LEVELS,
+  PROJECT_LEVEL_LABELS,
+  isProjectLevel,
+  projectLevelLabel,
+} from "@/lib/levels";
 import InFeedAd from "@/components/InFeedAd";
+import LevelListing from "@/components/LevelListing";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+type Props = { searchParams: Promise<{ level?: string }> };
+
+const LEVEL_PAGE_SIZE = 60;
+
+export default async function HomePage({ searchParams }: Props) {
+  const { level: levelParam } = await searchParams;
+  const activeLevel = isProjectLevel(levelParam) ? levelParam : undefined;
+
+  // ?level=NCE (etc) — the nav's level links land here, so this branch is what
+  // makes those links actually filter instead of silently reloading "/".
+  if (activeLevel) {
+    return <LevelListing level={activeLevel} />;
+  }
+
   const [deptSections, departmentsRaw] = await Promise.all([
     getRecentProjectsByDepartment(8, 5),
     getDepartmentsWithCounts(),

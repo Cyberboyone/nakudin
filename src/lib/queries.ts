@@ -23,6 +23,17 @@ export async function getDepartmentsWithCounts() {
   return rows;
 }
 
+export async function getLevelCounts(): Promise<Partial<Record<ProjectLevel, number>>> {
+  const rows = await db
+    .select({ level: projects.level, n: sql<number>`count(*)`.mapWith(Number) })
+    .from(projects)
+    .where(eq(projects.status, "PUBLISHED"))
+    .groupBy(projects.level);
+  const out: Partial<Record<ProjectLevel, number>> = {};
+  for (const r of rows) out[r.level as ProjectLevel] = r.n;
+  return out;
+}
+
 export async function getRecentPublishedProjects(limit = 6) {
   const rows = await db
     .select({
@@ -61,6 +72,33 @@ export async function getRecentPublishedProjectsByLevel(level: ProjectLevel, lim
     .limit(limit);
 
   return rows;
+}
+
+export async function getProjectsByLevel(level: ProjectLevel, limit = 60) {
+  return db
+    .select({
+      id: projects.id,
+      title: projects.title,
+      slug: projects.slug,
+      abstract: projects.abstract,
+      year: projects.year,
+      level: projects.level,
+      isSoftware: projects.isSoftware,
+      departmentName: departments.name,
+    })
+    .from(projects)
+    .innerJoin(departments, eq(projects.departmentId, departments.id))
+    .where(and(eq(projects.status, "PUBLISHED"), eq(projects.level, level)))
+    .orderBy(desc(projects.createdAt))
+    .limit(limit);
+}
+
+export async function countProjectsByLevel(level: ProjectLevel) {
+  const rows = await db
+    .select({ n: sql<number>`count(*)`.mapWith(Number) })
+    .from(projects)
+    .where(and(eq(projects.status, "PUBLISHED"), eq(projects.level, level)));
+  return rows[0]?.n ?? 0;
 }
 
 export async function getDepartmentBySlug(slug: string) {
@@ -450,7 +488,11 @@ export async function deleteMessageById(id: string) {
   await db.delete(messages).where(eq(messages.id, id));
 }
 
-export async function getRecentProjectsByDepartment(departmentLimit = 6, projectsPerDept = 5) {
+export async function getRecentProjectsByDepartment(
+  departmentLimit = 6,
+  projectsPerDept = 5,
+  level?: ProjectLevel
+) {
   const topDepts = await db
     .select({
       id: departments.id,
@@ -461,7 +503,11 @@ export async function getRecentProjectsByDepartment(departmentLimit = 6, project
     .from(departments)
     .leftJoin(
       projects,
-      and(eq(projects.departmentId, departments.id), eq(projects.status, "PUBLISHED"))
+      and(
+        eq(projects.departmentId, departments.id),
+        eq(projects.status, "PUBLISHED"),
+        ...(level ? [eq(projects.level, level)] : [])
+      )
     )
     .groupBy(departments.id)
     .having(sql`count(${projects.id}) > 0`)
@@ -480,7 +526,13 @@ export async function getRecentProjectsByDepartment(departmentLimit = 6, project
           isSoftware: projects.isSoftware,
         })
         .from(projects)
-        .where(and(eq(projects.departmentId, dept.id), eq(projects.status, "PUBLISHED")))
+        .where(
+          and(
+            eq(projects.departmentId, dept.id),
+            eq(projects.status, "PUBLISHED"),
+            ...(level ? [eq(projects.level, level)] : [])
+          )
+        )
         .orderBy(desc(projects.createdAt))
         .limit(projectsPerDept);
 

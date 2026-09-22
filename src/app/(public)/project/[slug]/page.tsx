@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import PdfPreview from "@/components/PdfPreview";
 import { getProjectBySlug, getRelatedProjects, incrementViewCount } from "@/lib/queries";
 import { safePublicUrl } from "@/lib/storage";
 import DownloadButton from "@/components/DownloadButton";
@@ -124,14 +125,7 @@ export default async function ProjectPage({ params }: Props) {
         <div className="mb-10">
           <h2 className="font-display text-lg mb-3">Preview — first 10 pages</h2>
           <div className="border border-border" style={{ height: "70vh" }}>
-            {/* Same-origin proxy — Android Chrome's embedded PDF viewer only
-                reliably renders same-origin PDFs inside an iframe. */}
-            <iframe
-              src={`/api/preview/${project.slug}`}
-              className="w-full h-full bg-surface"
-              title={`${project.title} preview`}
-              allowFullScreen
-            />
+            <PdfPreview slug={project.slug} title={project.title} />
           </div>
         </div>
       )}
