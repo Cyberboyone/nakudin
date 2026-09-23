@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createMessage } from "@/lib/queries";
 import { isServiceType } from "@/lib/services";
+import { createRateLimiter, requestIp } from "@/lib/rate-limit";
+
+// Same reasoning as the contact form's limiter: generous enough for a real
+// visitor, tight enough to block a flood of scripted requests.
+const takeServiceRequestAttempt = createRateLimiter(60 * 60 * 1000, 5);
 
 export async function POST(req: NextRequest) {
+  const { allowed, retryAfterSeconds } = takeServiceRequestAttempt(requestIp(req));
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests sent. Please try again later.", retryAfterSeconds },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json();
 
   const name =

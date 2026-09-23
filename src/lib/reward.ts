@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { createRateLimiter } from "./rate-limit";
 
 // Rewarded downloads: signing a download link is the only gate a web reward
 // can offer — AdSense/Ad Manager deliberately expose no server-side
@@ -63,29 +64,5 @@ export async function verifyDownloadGrant(
   }
 }
 
-// In-memory sliding window, best-effort per lambda instance. Short grant TTL
-// and the per-IP cap keep farming unattractive; tighten/centralise later if
-// Vercel starts running many instances in parallel.
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const RATE_LIMIT = 8; // 8 rewarded downloads per IP per hour
-const attempts = new Map<string, number[]>();
-
-export function takeGrantAttempt(ip: string): {
-  allowed: boolean;
-  retryAfterSeconds?: number;
-} {
-  const now = Date.now();
-  const recent = (attempts.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-
-  if (recent.length >= RATE_LIMIT) {
-    attempts.set(ip, recent);
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil((RATE_WINDOW_MS - (now - recent[0])) / 1000),
-    };
-  }
-
-  recent.push(now);
-  attempts.set(ip, recent);
-  return { allowed: true };
-}
+// Short grant TTL plus this per-IP cap keep farming unattractive.
+export const takeGrantAttempt = createRateLimiter(60 * 60 * 1000, 8); // 8 per IP per hour

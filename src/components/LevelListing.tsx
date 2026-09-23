@@ -12,11 +12,19 @@ import type { ProjectLevel } from "@/lib/levels";
 
 const LEVEL_PAGE_SIZE = 60;
 
-export default async function LevelListing({ level }: { level: ProjectLevel }) {
+export default async function LevelListing({
+  level,
+  page = 1,
+}: {
+  level: ProjectLevel;
+  page?: number;
+}) {
+  const offset = (page - 1) * LEVEL_PAGE_SIZE;
   const [projects, counts] = await Promise.all([
-    getProjectsByLevel(level, LEVEL_PAGE_SIZE),
+    getProjectsByLevel(level, LEVEL_PAGE_SIZE, offset),
     countProjectsByLevel(level),
   ]);
+  const totalPages = Math.max(1, Math.ceil(counts / LEVEL_PAGE_SIZE));
 
   return (
     <div className="mx-auto max-w-5xl px-6">
@@ -71,8 +79,41 @@ export default async function LevelListing({ level }: { level: ProjectLevel }) {
 
         {projects.length === 0 && (
           <div className="py-10 text-sm text-muted">
-            No published projects for this level yet — check back soon.
+            {page > 1
+              ? "No projects on this page."
+              : "No published projects for this level yet — check back soon."}
           </div>
+        )}
+
+        {totalPages > 1 && (
+          <nav
+            aria-label="Pagination"
+            className="mt-8 flex items-center justify-between gap-4"
+          >
+            {page > 1 ? (
+              <Link
+                href={`/?level=${level}&page=${page - 1}`}
+                className="px-4 py-2 text-sm border border-border hover:text-lamp hover:border-lamp/40 transition-colors"
+              >
+                &larr; Previous
+              </Link>
+            ) : (
+              <span />
+            )}
+            <span className="text-sm text-muted">
+              Page {page} of {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link
+                href={`/?level=${level}&page=${page + 1}`}
+                className="px-4 py-2 text-sm border border-border hover:text-lamp hover:border-lamp/40 transition-colors"
+              >
+                Next &rarr;
+              </Link>
+            ) : (
+              <span />
+            )}
+          </nav>
         )}
       </section>
     </div>

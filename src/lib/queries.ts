@@ -74,7 +74,7 @@ export async function getRecentPublishedProjectsByLevel(level: ProjectLevel, lim
   return rows;
 }
 
-export async function getProjectsByLevel(level: ProjectLevel, limit = 60) {
+export async function getProjectsByLevel(level: ProjectLevel, limit = 60, offset = 0) {
   return db
     .select({
       id: projects.id,
@@ -90,7 +90,8 @@ export async function getProjectsByLevel(level: ProjectLevel, limit = 60) {
     .innerJoin(departments, eq(projects.departmentId, departments.id))
     .where(and(eq(projects.status, "PUBLISHED"), eq(projects.level, level)))
     .orderBy(desc(projects.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function countProjectsByLevel(level: ProjectLevel) {

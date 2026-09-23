@@ -3,8 +3,23 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { admins } from "@/db/schema";
 import { verifyPassword, createSessionToken, sessionCookie } from "@/lib/auth";
+import { createRateLimiter, requestIp } from "@/lib/rate-limit";
+
+// bcrypt already slows down brute-forcing, but with no cap at all an attacker
+// can still grind through a password list. 5 attempts / 15 minutes / IP is
+// the standard login-throttling number — generous for a real admin who
+// mistypes, tight for a script.
+const takeLoginAttempt = createRateLimiter(15 * 60 * 1000, 5);
 
 export async function POST(req: NextRequest) {
+  const { allowed, retryAfterSeconds } = takeLoginAttempt(requestIp(req));
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many login attempts. Please try again later.", retryAfterSeconds },
+      { status: 429 }
+    );
+  }
+
   const { email, password } = await req.json();
 
   if (!email || !password) {
