@@ -61,4 +61,3 @@ export default function PdfPreview({ slug, title }: { slug: string; title: strin
     />
   );
 }
-</content>
