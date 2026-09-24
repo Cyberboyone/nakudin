@@ -7,7 +7,6 @@ import { getDepartmentBySlug, getPublishedProjectsByDepartment } from "@/lib/que
 import { PROJECT_LEVELS, PROJECT_LEVEL_LABELS, projectLevelLabel, isProjectLevel } from "@/lib/levels";
 import InFeedAd from "@/components/InFeedAd";
 
-export const dynamic = "force-dynamic";
 
 const BASE_URL = "https://www.nakudin.com";
 

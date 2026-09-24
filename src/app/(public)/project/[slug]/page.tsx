@@ -10,7 +10,6 @@ import DownloadButton from "@/components/DownloadButton";
 import InFeedAd from "@/components/InFeedAd";
 import { projectLevelLabel } from "@/lib/levels";
 
-export const dynamic = "force-dynamic";
 
 const BASE_URL = "https://www.nakudin.com";
 

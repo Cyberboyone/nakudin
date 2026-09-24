@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import {
   getProjectByIdForAdmin,
   updateProjectFields,
@@ -150,6 +151,9 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
+  revalidateTag("projects", { expire: 0 });
+  revalidateTag("departments", { expire: 0 });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -177,6 +181,9 @@ export async function DELETE(
   );
 
   await deleteProjectById(id);
+
+  revalidateTag("projects", { expire: 0 });
+  revalidateTag("departments", { expire: 0 });
 
   return NextResponse.json({ ok: true });
 }

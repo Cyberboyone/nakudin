@@ -1,10 +1,18 @@
 import { eq, ne, desc, and, or, ilike, sql } from "drizzle-orm";
 import { createHash } from "crypto";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { departments, projects, tags, projectTags, messages, viewLog } from "@/db/schema";
 import type { ProjectLevel } from "@/lib/levels";
 
-export async function getDepartmentsWithCounts() {
+// Public read queries below are wrapped in unstable_cache so a page visit
+// doesn't necessarily mean a Postgres round trip — the ORM isn't `fetch`, so
+// this is the only layer that actually caches these reads. The 5-minute
+// revalidate is just a fallback ceiling: the admin project routes call
+// revalidateTag on every create/update/delete, so real edits show up
+// immediately rather than waiting out the window.
+
+async function _getDepartmentsWithCounts() {
   const rows = await db
     .select({
       id: departments.id,
@@ -22,6 +30,11 @@ export async function getDepartmentsWithCounts() {
 
   return rows;
 }
+export const getDepartmentsWithCounts = unstable_cache(
+  _getDepartmentsWithCounts,
+  ["departments-with-counts"],
+  { tags: ["departments", "projects"], revalidate: 300 }
+);
 
 export async function getLevelCounts(): Promise<Partial<Record<ProjectLevel, number>>> {
   const rows = await db
@@ -74,7 +87,7 @@ export async function getRecentPublishedProjectsByLevel(level: ProjectLevel, lim
   return rows;
 }
 
-export async function getProjectsByLevel(level: ProjectLevel, limit = 60, offset = 0) {
+async function _getProjectsByLevel(level: ProjectLevel, limit = 60, offset = 0) {
   return db
     .select({
       id: projects.id,
@@ -93,16 +106,26 @@ export async function getProjectsByLevel(level: ProjectLevel, limit = 60, offset
     .limit(limit)
     .offset(offset);
 }
+export const getProjectsByLevel = unstable_cache(
+  _getProjectsByLevel,
+  ["projects-by-level"],
+  { tags: ["projects"], revalidate: 300 }
+);
 
-export async function countProjectsByLevel(level: ProjectLevel) {
+async function _countProjectsByLevel(level: ProjectLevel) {
   const rows = await db
     .select({ n: sql<number>`count(*)`.mapWith(Number) })
     .from(projects)
     .where(and(eq(projects.status, "PUBLISHED"), eq(projects.level, level)));
   return rows[0]?.n ?? 0;
 }
+export const countProjectsByLevel = unstable_cache(
+  _countProjectsByLevel,
+  ["count-projects-by-level"],
+  { tags: ["projects"], revalidate: 300 }
+);
 
-export async function getDepartmentBySlug(slug: string) {
+async function _getDepartmentBySlug(slug: string) {
   const rows = await db
     .select()
     .from(departments)
@@ -110,11 +133,13 @@ export async function getDepartmentBySlug(slug: string) {
     .limit(1);
   return rows[0] ?? null;
 }
+export const getDepartmentBySlug = unstable_cache(
+  _getDepartmentBySlug,
+  ["department-by-slug"],
+  { tags: ["departments"], revalidate: 300 }
+);
 
-export async function getPublishedProjectsByDepartment(
-  departmentId: string,
-  level?: ProjectLevel
-) {
+async function _getPublishedProjectsByDepartment(departmentId: string, level?: ProjectLevel) {
   const conditions = [
     eq(projects.departmentId, departmentId),
     eq(projects.status, "PUBLISHED"),
@@ -127,8 +152,13 @@ export async function getPublishedProjectsByDepartment(
     .where(and(...conditions))
     .orderBy(desc(projects.createdAt));
 }
+export const getPublishedProjectsByDepartment = unstable_cache(
+  _getPublishedProjectsByDepartment,
+  ["published-projects-by-department"],
+  { tags: ["projects"], revalidate: 300 }
+);
 
-export async function getProjectBySlug(slug: string) {
+async function _getProjectBySlug(slug: string) {
   const rows = await db
     .select({
       project: projects,
@@ -155,13 +185,18 @@ export async function getProjectBySlug(slug: string) {
     tags: projectTagRows.map((t) => t.name),
   };
 }
+export const getProjectBySlug = unstable_cache(
+  _getProjectBySlug,
+  ["project-by-slug"],
+  { tags: ["projects"], revalidate: 300 }
+);
 
 export async function getProjectById(id: string) {
   const rows = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
   return rows[0] ?? null;
 }
 
-export async function getRelatedProjects(departmentId: string, excludeId: string, limit = 4) {
+async function _getRelatedProjects(departmentId: string, excludeId: string, limit = 4) {
   return db
     .select()
     .from(projects)
@@ -175,6 +210,11 @@ export async function getRelatedProjects(departmentId: string, excludeId: string
     .orderBy(desc(projects.createdAt))
     .limit(limit);
 }
+export const getRelatedProjects = unstable_cache(
+  _getRelatedProjects,
+  ["related-projects"],
+  { tags: ["projects"], revalidate: 300 }
+);
 
 export async function incrementViewCount(id: string, ip: string) {
   const ipHash = createHash("sha256").update(ip).digest("hex");
@@ -489,7 +529,7 @@ export async function deleteMessageById(id: string) {
   await db.delete(messages).where(eq(messages.id, id));
 }
 
-export async function getRecentProjectsByDepartment(
+async function _getRecentProjectsByDepartment(
   departmentLimit = 6,
   projectsPerDept = 5,
   level?: ProjectLevel
@@ -543,6 +583,11 @@ export async function getRecentProjectsByDepartment(
 
   return results;
 }
+export const getRecentProjectsByDepartment = unstable_cache(
+  _getRecentProjectsByDepartment,
+  ["recent-projects-by-department"],
+  { tags: ["projects", "departments"], revalidate: 300 }
+);
 
 // --- Sitemap ---
 

@@ -9,6 +9,9 @@ import { isProjectLevel, projectLevelLabel } from "@/lib/levels";
 import InFeedAd from "@/components/InFeedAd";
 import LevelListing from "@/components/LevelListing";
 
+// Reads searchParams (level, page) on every request, so this route can't be
+// prerendered/ISR'd — but the queries it calls are still cached (see
+// queries.ts), so a visit here doesn't necessarily mean a fresh DB hit.
 export const dynamic = "force-dynamic";
 
 type Props = { searchParams: Promise<{ level?: string; page?: string }> };

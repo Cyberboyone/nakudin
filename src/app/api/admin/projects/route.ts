@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { db } from "@/lib/db";
 import { projects, projectTags } from "@/db/schema";
 import { upsertDepartmentByName, findOrCreateTag } from "@/lib/queries";
@@ -109,6 +110,11 @@ export async function POST(req: NextRequest) {
       const tag = await findOrCreateTag(name);
       await db.insert(projectTags).values({ projectId: project.id, tagId: tag.id });
     }
+
+    // Bust the cached public reads immediately — expire: 0 means the next
+    // visit gets fresh data rather than serving stale for a while.
+    revalidateTag("projects", { expire: 0 });
+    revalidateTag("departments", { expire: 0 });
 
     return NextResponse.json({ id: project.id, slug: project.slug });
   } catch (err) {
