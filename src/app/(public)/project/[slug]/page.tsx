@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import PdfPreview from "@/components/PdfPreview";
-import { getProjectBySlug, getRelatedProjects, incrementViewCount } from "@/lib/queries";
+import { getProjectBySlug, getRelatedProjects, getViewedTogether, incrementViewCount } from "@/lib/queries";
 import { safePublicUrl } from "@/lib/storage";
 import DownloadButton from "@/components/DownloadButton";
 import InFeedAd from "@/components/InFeedAd";
@@ -60,7 +60,10 @@ export default async function ProjectPage({ params }: Props) {
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() || hdrs.get("x-real-ip") || "0.0.0.0";
   incrementViewCount(project.id, ip).catch(() => {});
 
-  const relatedProjects = await getRelatedProjects(project.departmentId, project.id, 5);
+  const [relatedProjects, viewedTogether] = await Promise.all([
+    getRelatedProjects(project.departmentId, project.id, project.level, project.tags, 5),
+    getViewedTogether(project.id, 4),
+  ]);
 
   const screenshotUrl = project.screenshotFileKey ? safePublicUrl(project.screenshotFileKey) : null;
 
@@ -157,23 +160,45 @@ export default async function ProjectPage({ params }: Props) {
         </Link>
       </p>
 
-      {relatedProjects.length > 0 && (
+      {(viewedTogether.length > 0 || relatedProjects.length > 0) && (
         <div className="mt-12">
-          <h2 className="font-display text-lg mb-4">More from {project.departmentName}</h2>
-          <ul className="divide-y divide-border border-y border-border">
-            {relatedProjects.map((p) => (
-              <li key={p.id} className="py-3">
-                <Link
-                  href={`/project/${p.slug}`}
-                  className="-mx-3 block rounded-lg px-3 py-2 transition-colors hover:bg-surface hover:text-lamp"
-                >
-                  {p.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {viewedTogether.length > 0 && (
+            <div className="mb-10">
+              <h2 className="font-display text-lg mb-4">Visitors who viewed this also viewed</h2>
+              <ul className="divide-y divide-border border-y border-border">
+                {viewedTogether.map((p) => (
+                  <li key={p.id} className="py-3">
+                    <Link
+                      href={`/project/${p.slug}`}
+                      className="-mx-3 block rounded-lg px-3 py-2 transition-colors hover:bg-surface hover:text-lamp"
+                    >
+                      {p.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-          {/* Ad under the related list */}
+          {relatedProjects.length > 0 && (
+            <div>
+              <h2 className="font-display text-lg mb-4">More from {project.departmentName}</h2>
+              <ul className="divide-y divide-border border-y border-border">
+                {relatedProjects.map((p) => (
+                  <li key={p.id} className="py-3">
+                    <Link
+                      href={`/project/${p.slug}`}
+                      className="-mx-3 block rounded-lg px-3 py-2 transition-colors hover:bg-surface hover:text-lamp"
+                    >
+                      {p.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Ad under the related lists */}
           <div className="mt-8">
             <InFeedAd />
           </div>

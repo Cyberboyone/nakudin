@@ -1,4 +1,5 @@
-import { eq, ne, desc, and, or, ilike, sql } from "drizzle-orm";
+import { eq, ne, desc, and, or, ilike, sql, inArray, gt } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { createHash } from "crypto";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
@@ -11,6 +12,18 @@ import type { ProjectLevel } from "@/lib/levels";
 // revalidate is just a fallback ceiling: the admin project routes call
 // revalidateTag on every create/update/delete, so real edits show up
 // immediately rather than waiting out the window.
+
+// "Hotness" ordering for listings: blends engagement (downloads count 3x a
+// view, since a download is real intent) with recency, so genuinely popular
+// projects can surface without new projects sitting at zero forever. Every
+// ~14 days of age costs about one log-point of engagement (roughly e times
+// the views+downloads) to stay level — a reasonable starting balance, not a
+// precise formula; adjust the 14 or the download weight if it feels off in
+// practice.
+const hotness = sql`
+  ln(1 + ${projects.downloadCount} * 3 + ${projects.viewCount})
+  - extract(epoch from (now() - ${projects.createdAt})) / 86400.0 / 14
+`;
 
 async function _getDepartmentsWithCounts() {
   const rows = await db
@@ -102,7 +115,7 @@ async function _getProjectsByLevel(level: ProjectLevel, limit = 60, offset = 0) 
     .from(projects)
     .innerJoin(departments, eq(projects.departmentId, departments.id))
     .where(and(eq(projects.status, "PUBLISHED"), eq(projects.level, level)))
-    .orderBy(desc(projects.createdAt))
+    .orderBy(sql`${hotness} desc`)
     .limit(limit)
     .offset(offset);
 }
@@ -196,10 +209,35 @@ export async function getProjectById(id: string) {
   return rows[0] ?? null;
 }
 
-async function _getRelatedProjects(departmentId: string, excludeId: string, limit = 4) {
-  return db
-    .select()
+async function _getRelatedProjects(
+  departmentId: string,
+  excludeId: string,
+  level: ProjectLevel,
+  tagNames: string[],
+  limit = 4
+) {
+  // Same department is required; same level and shared tags each add weight
+  // on top of that, so a same-level project with overlapping tags outranks
+  // a same-department project that just happens to be newer. Recency is
+  // still the tiebreaker among equally-relevant matches.
+  const rows = await db
+    .select({
+      id: projects.id,
+      title: projects.title,
+      slug: projects.slug,
+      abstract: projects.abstract,
+      year: projects.year,
+      level: projects.level,
+      isSoftware: projects.isSoftware,
+    })
     .from(projects)
+    .leftJoin(projectTags, eq(projectTags.projectId, projects.id))
+    .leftJoin(
+      tags,
+      tagNames.length > 0
+        ? and(eq(tags.id, projectTags.tagId), inArray(tags.name, tagNames))
+        : sql`false`
+    )
     .where(
       and(
         eq(projects.departmentId, departmentId),
@@ -207,13 +245,55 @@ async function _getRelatedProjects(departmentId: string, excludeId: string, limi
         ne(projects.id, excludeId)
       )
     )
-    .orderBy(desc(projects.createdAt))
+    .groupBy(projects.id)
+    .orderBy(
+      sql`(case when ${projects.level} = ${level} then 2 else 0 end) + count(distinct ${tags.id}) desc`,
+      desc(projects.createdAt)
+    )
     .limit(limit);
+
+  return rows;
 }
 export const getRelatedProjects = unstable_cache(
   _getRelatedProjects,
   ["related-projects"],
   { tags: ["projects"], revalidate: 300 }
+);
+
+async function _getViewedTogether(projectId: string, limit = 4) {
+  // "Visitors who viewed X also viewed Y" from real behavior in view_log,
+  // rather than metadata matching — counts, for each OTHER published
+  // project, how many of the same ip_hashes also viewed this one.
+  const otherView = alias(viewLog, "other_view");
+
+  const rows = await db
+    .select({
+      id: projects.id,
+      title: projects.title,
+      slug: projects.slug,
+      abstract: projects.abstract,
+      year: projects.year,
+      level: projects.level,
+      isSoftware: projects.isSoftware,
+      coViewers: sql<number>`count(distinct ${viewLog.ipHash})`.mapWith(Number),
+    })
+    .from(viewLog)
+    .innerJoin(
+      otherView,
+      and(eq(otherView.ipHash, viewLog.ipHash), ne(otherView.projectId, viewLog.projectId))
+    )
+    .innerJoin(projects, eq(projects.id, otherView.projectId))
+    .where(and(eq(viewLog.projectId, projectId), eq(projects.status, "PUBLISHED")))
+    .groupBy(projects.id)
+    .orderBy(desc(sql`count(distinct ${viewLog.ipHash})`))
+    .limit(limit);
+
+  return rows;
+}
+export const getViewedTogether = unstable_cache(
+  _getViewedTogether,
+  ["viewed-together"],
+  { tags: ["projects", "views"], revalidate: 300 }
 );
 
 export async function incrementViewCount(id: string, ip: string) {
@@ -460,6 +540,29 @@ export async function getTopProjects(limit = 10) {
     .limit(limit);
 }
 
+// All-time view_count means an old project just keeps compounding, even if
+// nobody has looked at it in months. This counts view_log rows from the
+// last `days` instead, so it reflects what's getting attention *now*.
+export async function getTrendingProjects(limit = 10, days = 7) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  return db
+    .select({
+      id: projects.id,
+      title: projects.title,
+      slug: projects.slug,
+      recentViews: sql<number>`count(${viewLog.id})`.mapWith(Number),
+      departmentName: departments.name,
+    })
+    .from(viewLog)
+    .innerJoin(projects, eq(projects.id, viewLog.projectId))
+    .leftJoin(departments, eq(projects.departmentId, departments.id))
+    .where(and(eq(projects.status, "PUBLISHED"), gt(viewLog.viewedAt, since)))
+    .groupBy(projects.id, departments.name)
+    .orderBy(desc(sql`count(${viewLog.id})`))
+    .limit(limit);
+}
+
 export async function getUniqueViews24h() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const [row] = await db
@@ -574,7 +677,7 @@ async function _getRecentProjectsByDepartment(
             ...(level ? [eq(projects.level, level)] : [])
           )
         )
-        .orderBy(desc(projects.createdAt))
+        .orderBy(sql`${hotness} desc`)
         .limit(projectsPerDept);
 
       return { ...dept, recentProjects };

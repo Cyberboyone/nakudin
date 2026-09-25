@@ -3,6 +3,7 @@ import {
   getAdminStats,
   getRecentMessagesForAdmin,
   getTopProjects,
+  getTrendingProjects,
   getDepartmentAnalytics,
   getUniqueViews24h,
 } from "@/lib/queries";
@@ -28,7 +29,7 @@ function StatCard({
 }
 
 export default async function AdminDashboardPage() {
-  const [stats, recentMessages, topProjects, deptAnalytics, unique24h] =
+  const [stats, recentMessages, topProjects, trending, deptAnalytics, unique24h] =
     await Promise.all([
       getAdminStats().catch(() => ({
         projects: { published: 0, drafts: 0, totalViews: 0, totalDownloads: 0 },
@@ -36,6 +37,7 @@ export default async function AdminDashboardPage() {
       })),
       getRecentMessagesForAdmin(6).catch(() => []),
       getTopProjects(10).catch(() => []),
+      getTrendingProjects(10, 7).catch(() => []),
       getDepartmentAnalytics().catch(() => []),
       getUniqueViews24h().catch(() => 0),
     ]);
@@ -103,6 +105,36 @@ export default async function AdminDashboardPage() {
                 </div>
                 <div className="text-right text-xs text-muted whitespace-nowrap">
                   {p.viewCount.toLocaleString()} views · {p.downloadCount.toLocaleString()} downloads
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Trending this week — last 7 days of views, not all-time */}
+      <section className="mb-12">
+        <h2 className="font-display text-lg mb-4">Trending this week</h2>
+        {trending.length === 0 ? (
+          <p className="py-6 text-sm text-muted">No views in the last 7 days yet.</p>
+        ) : (
+          <div className="border-y border-border divide-y divide-border">
+            {trending.map((p, i) => (
+              <div key={p.id} className="py-3 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm">
+                    <span className="text-muted mr-2">{i + 1}.</span>
+                    <Link
+                      href={`/project/${p.slug}`}
+                      className="hover:text-lamp transition-colors truncate"
+                    >
+                      {p.title}
+                    </Link>
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">{p.departmentName}</p>
+                </div>
+                <div className="text-right text-xs text-muted whitespace-nowrap">
+                  {p.recentViews.toLocaleString()} views this week
                 </div>
               </div>
             ))}
