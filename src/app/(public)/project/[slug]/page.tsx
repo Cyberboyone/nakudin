@@ -36,8 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url,
       type: "article",
-      publishedTime: project.createdAt?.toISOString(),
-      modifiedTime: project.updatedAt?.toISOString(),
+      publishedTime: new Date(project.createdAt).toISOString(),
+      modifiedTime: new Date(project.updatedAt).toISOString(),
       ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630 }] }),
     },
     twitter: {
