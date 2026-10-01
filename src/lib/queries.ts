@@ -655,7 +655,11 @@ async function _getRecentProjectsByDepartment(
     )
     .groupBy(departments.id)
     .having(sql`count(${projects.id}) > 0`)
-    .orderBy(sql`count(${projects.id}) DESC`)
+    // By each department's single hottest project, not total project count —
+    // otherwise whichever department has accumulated the most projects over
+    // time sits at the top forever. This lets a department with one
+    // genuinely fresh/popular project take the lead for a while.
+    .orderBy(sql`max(${hotness}) desc`)
     .limit(departmentLimit);
 
   const results = await Promise.all(
