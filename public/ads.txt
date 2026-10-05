@@ -1,5 +1,1 @@
-# Replace pub-0000000000000000 with your real AdSense publisher ID
-# (found in your AdSense account under Account > Settings > Account information).
-# This file MUST be reachable at https://nakudin.com/ads.txt exactly as below,
-# one line per ad network you use — this is standard for every AdSense site.
-google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+google.com, pub-9529770421530115, DIRECT, f08c47fec0942fa0
