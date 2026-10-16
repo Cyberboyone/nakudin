@@ -105,6 +105,9 @@ export default async function ProjectPage({ params }: Props) {
       )}
 
       <p className="mt-6 leading-relaxed text-text/90">{project.abstract}</p>
+      <p className="mt-4 text-sm text-muted border-l-2 border-border pl-3">
+        For reference and learning only. Do not submit this work as your own.
+      </p>
 
       {/* Ad slot */}
       <div className="my-8 border border-dashed border-border py-6 text-center text-xs text-muted">

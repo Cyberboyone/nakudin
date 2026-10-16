@@ -47,9 +47,9 @@ export default async function HomePage({ searchParams }: Props) {
             The final year project shouldn&apos;t cost you a thing to learn from.
           </p>
           <p className="mt-5 text-muted max-w-md leading-relaxed">
-            Browse source code and complete project materials by department
-            and level. Software projects ship with the full codebase; every
-            entry includes the complete write-up.
+            Browse past project materials by department and level, for
+            reference and learning. Software projects include their source
+            code; every entry includes its write-up.
           </p>
           <form action="/search" className="mt-8 flex gap-2 max-w-md">
             <SearchBox

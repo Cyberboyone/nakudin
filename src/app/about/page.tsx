@@ -6,14 +6,15 @@ export default function AboutPage() {
       <h1 className="font-display text-3xl mb-6">About Nakudin</h1>
       <div className="space-y-5 text-text/90 leading-relaxed">
         <p>
-          Nakudin is a free archive of final year project source code and
-          materials for university students — built to make final year
-          projects less of a mystery and less of a financial burden.
+          Nakudin is a free reference archive of final year project source
+          code and materials for university students. It exists so students
+          can study how past projects were structured, researched, and built.
         </p>
         <p>
-          Every listing includes the complete project write-up. Where the
-          project involves software, the full source code is included too, so
-          you can see exactly how it was built, not just read about it.
+          Each listing shows a project&apos;s write-up and, for software projects,
+          its source code, so you can see how a finished project was put
+          together. Materials are for reference and learning only and must
+          not be submitted as your own work.
         </p>
         <p>
           Projects are organized by department and academic level —
